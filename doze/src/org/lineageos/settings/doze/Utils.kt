@@ -12,8 +12,6 @@ import android.hardware.SensorManager
 import android.hardware.display.AmbientDisplayConfiguration
 import android.os.UserHandle
 import android.provider.Settings
-import android.provider.Settings.Secure.DOZE_ALWAYS_ON
-import android.provider.Settings.Secure.DOZE_ENABLED
 import android.util.Log
 import androidx.preference.PreferenceManager
 
@@ -21,9 +19,6 @@ object Utils {
     private const val TAG = "DozeUtils"
 
     private const val DOZE_INTENT = "com.android.systemui.doze.pulse"
-
-    const val ALWAYS_ON_DISPLAY = "always_on_display"
-    const val DOZE_ENABLE = "doze_enable"
 
     const val CATEGORY_PICKUP_SENSOR = "pickup_sensor"
     const val CATEGORY_PROXIMITY_SENSOR = "proximity_sensor"
@@ -50,11 +45,7 @@ object Utils {
     }
 
     fun isDozeEnabled(context: Context): Boolean {
-        return Settings.Secure.getInt(context.contentResolver, DOZE_ENABLED, 1) != 0
-    }
-
-    fun enableDoze(context: Context, enable: Boolean): Boolean {
-        return Settings.Secure.putInt(context.contentResolver, DOZE_ENABLED, if (enable) 1 else 0)
+       return AmbientDisplayConfiguration(context).pulseOnNotificationEnabled(UserHandle.USER_CURRENT)
     }
 
     fun launchDozePulse(context: Context) {
@@ -62,16 +53,8 @@ object Utils {
         context.sendBroadcastAsUser(Intent(DOZE_INTENT), UserHandle(UserHandle.USER_CURRENT))
     }
 
-    fun enableAlwaysOn(context: Context, enable: Boolean): Boolean {
-        return Settings.Secure.putIntForUser(
-            context.contentResolver, DOZE_ALWAYS_ON, if (enable) 1 else 0, UserHandle.USER_CURRENT
-        )
-    }
-
     fun isAlwaysOnEnabled(context: Context): Boolean {
-        return Settings.Secure.getIntForUser(
-            context.contentResolver, DOZE_ALWAYS_ON, 0, UserHandle.USER_CURRENT
-        ) != 0
+        return AmbientDisplayConfiguration(context).alwaysOnEnabled(UserHandle.USER_CURRENT)
     }
 
     fun alwaysOnDisplayAvailable(context: Context): Boolean {
