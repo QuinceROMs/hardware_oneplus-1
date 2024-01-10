@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    SPDX-FileCopyrightText: 2019 CypherOS
-    SPDX-FileCopyrightText: 2014-2020 Paranoid Android
-    SPDX-FileCopyrightText: 2023 The LineageOS Project
-    SPDX-FileCopyrightText: 2023 Yet Another AOSP Project
+    Copyright (C) 2019 CypherOS
+    Copyright (C) 2014-2020 Paranoid Android
+    Copyright (C) 2023 The LineageOS Project
+    Copyright (C) 2023 Yet Another AOSP Project
     SPDX-License-Identifier: Apache-2.0
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -36,7 +36,8 @@
                 android:layout_width="@dimen/alert_slider_icon_size"
                 android:layout_height="@dimen/alert_slider_icon_size"
                 android:layout_gravity="center"
-                android:layout_marginLeft="@dimen/alert_slider_margin" />
+                android:layout_marginLeft="@dimen/alert_slider_margin"
+                android:tint="?android:attr/textColorPrimary" />
         </FrameLayout>
 
         <TextView
@@ -45,12 +46,10 @@
             android:layout_height="fill_parent"
             android:fontFamily="@*android:string/config_headlineFontFamilyMedium"
             android:gravity="center_vertical"
-            android:textColor="@color/alert_slider_text_color"
+            android:textColor="?android:attr/textColorPrimary"
             android:autoSizeTextType="uniform"
-            android:autoSizeMinTextSize="8sp"
+            android:autoSizeMinTextSize="4sp"
             android:autoSizeMaxTextSize="@dimen/alert_slider_text_size"
-            android:scrollHorizontally="true"
-            android:ellipsize="marquee"
-            android:lines="1" />
+            android:breakStrategy="simple" />
     </LinearLayout>
 </LinearLayout>
