@@ -14,6 +14,7 @@ import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
 import android.media.AudioManager
 import android.media.AudioSystem
+import android.os.UserHandle
 import android.os.VibrationAttributes
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -23,15 +24,20 @@ import com.android.internal.os.DeviceKeyHandler
 import java.io.File
 import java.util.concurrent.Executors
 
-class KeyHandler : DeviceKeyHandler {
+class KeyHandler(private val context: Context) : DeviceKeyHandler {
+    private val audioManager = context.getSystemService(AudioManager::class.java)!!
+    private val cameraManager = context.getSystemService(CameraManager::class.java)!!
+    private val notificationManager = context.getSystemService(NotificationManager::class.java)!!
+    private val vibrator = context.getSystemService(Vibrator::class.java)!!
 
-    private lateinit var context: Context
-    private lateinit var audioManager: AudioManager
-    private lateinit var cameraManager: CameraManager
-    private lateinit var notificationManager: NotificationManager
-    private lateinit var vibrator: Vibrator
-    private lateinit var packageContext: Context
-    private lateinit var sharedPreferences: android.content.SharedPreferences
+    private val packageContext = context.createPackageContext(
+        KeyHandler::class.java.getPackage()!!.name, 0
+    )
+    private val sharedPreferences
+        get() = packageContext.getSharedPreferences(
+            packageContext.packageName + "_preferences",
+            Context.MODE_PRIVATE or Context.MODE_MULTI_PROCESS
+        )
 
     private val executorService = Executors.newSingleThreadExecutor()
 
@@ -54,21 +60,7 @@ class KeyHandler : DeviceKeyHandler {
             }
         }
 
-    constructor(context: Context) : this() {
-        this.context = context
-        audioManager = context.getSystemService(AudioManager::class.java)!!
-        cameraManager = context.getSystemService(CameraManager::class.java)!!
-        notificationManager = context.getSystemService(NotificationManager::class.java)!!
-        vibrator = context.getSystemService(Vibrator::class.java)!!
-
-        packageContext = context.createPackageContext(
-            KeyHandler::class.java.getPackage()!!.name, 0
-        )
-        sharedPreferences = packageContext.getSharedPreferences(
-            packageContext.packageName + "_preferences",
-            Context.MODE_PRIVATE or Context.MODE_MULTI_PROCESS
-        )
-
+    init {
         context.registerReceiver(
             broadcastReceiver,
             IntentFilter().apply {
@@ -77,8 +69,6 @@ class KeyHandler : DeviceKeyHandler {
             },
         )
     }
-
-    constructor()
 
     override fun handleKeyEvent(event: KeyEvent): KeyEvent? {
         if (event.action != KeyEvent.ACTION_DOWN) {
@@ -186,11 +176,12 @@ class KeyHandler : DeviceKeyHandler {
     }
 
     private fun sendNotification(position: Int, mode: Int) {
-        context.sendBroadcast(
+        context.sendBroadcastAsUser(
             Intent(CHANGED_ACTION).apply {
                 putExtra("position", position)
                 putExtra("mode", mode)
-            }
+            },
+            UserHandle.CURRENT,
         )
     }
 
@@ -201,9 +192,9 @@ class KeyHandler : DeviceKeyHandler {
         const val CHANGED_ACTION = "org.lineageos.settings.UPDATE_SETTINGS"
 
         // Slider key positions
-        const val POSITION_TOP = 1
-        const val POSITION_MIDDLE = 2
-        const val POSITION_BOTTOM = 3
+        public const val POSITION_TOP = 1
+        public const val POSITION_MIDDLE = 2
+        public const val POSITION_BOTTOM = 3
 
         // Preference keys
         private const val ALERT_SLIDER_TOP_KEY = "config_top_position"
@@ -222,6 +213,13 @@ class KeyHandler : DeviceKeyHandler {
         private const val TORCH_OFFSET = 8
         const val TORCH_ON = TORCH_OFFSET + 0
         const val TORCH_OFF = TORCH_OFFSET + 1
+
+        public const val KEY_VALUE_TOTAL_SILENCE = 0
+        public const val KEY_VALUE_SILENT = 1
+        public const val KEY_VALUE_PRIORTY_ONLY = 2
+        public const val KEY_VALUE_VIBRATE = 3
+        public const val KEY_VALUE_NORMAL = 4
+
 
         // Vibration attributes
         private val HARDWARE_FEEDBACK_VIBRATION_ATTRIBUTES =
