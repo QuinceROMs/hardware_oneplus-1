@@ -204,7 +204,7 @@ class KeyHandler(private val context: Context) : DeviceKeyHandler {
         private const val SHOW_DIALOG = "config_show_dialog"
 
         // ZEN constants
-        private const val ZEN_OFFSET = 2
+        const val ZEN_OFFSET = 2
         const val ZEN_PRIORITY_ONLY = 3
         const val ZEN_TOTAL_SILENCE = 4
         const val ZEN_ALARMS_ONLY = 5
@@ -213,13 +213,6 @@ class KeyHandler(private val context: Context) : DeviceKeyHandler {
         private const val TORCH_OFFSET = 8
         const val TORCH_ON = TORCH_OFFSET + 0
         const val TORCH_OFF = TORCH_OFFSET + 1
-
-        public const val KEY_VALUE_TOTAL_SILENCE = 0
-        public const val KEY_VALUE_SILENT = 1
-        public const val KEY_VALUE_PRIORTY_ONLY = 2
-        public const val KEY_VALUE_VIBRATE = 3
-        public const val KEY_VALUE_NORMAL = 4
-
 
         // Vibration attributes
         private val HARDWARE_FEEDBACK_VIBRATION_ATTRIBUTES =

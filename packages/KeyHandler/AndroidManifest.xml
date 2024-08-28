@@ -74,6 +74,6 @@
         <service
             android:name=".KeyHandler"
             android:permission="KeyHandlerService"
-            android:exported="true" />
+            android:exported="false" />
     </application>
 </manifest>
