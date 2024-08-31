@@ -12,5 +12,5 @@
     <!-- Whether to show the notification dialog on the left side.
          Should also match side of the device where the physical switch
          is located. -->
-    <item name="alert_slider_dialog_left" type="bool">false</item>
+    <item name="alert_slider_dialog_left" type="bool">true</item>
 </resources>
