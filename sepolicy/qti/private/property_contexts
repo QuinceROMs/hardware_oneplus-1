@@ -2,7 +2,8 @@
 sys.oplus_ftm_mode    u:object_r:exported_system_prop:s0
 
 # Autotest
-persist.sys.oplus.autotest.monkeyRunning    u:object_r:exported_system_prop:s0
+oplus.autotest.                u:object_r:exported_system_prop:s0
+persist.sys.oplus.autotest.    u:object_r:exported_system_prop:s0
 
 # Bluetooth
 persist.sys.bt.a2dp.pendingtime    u:object_r:exported_system_prop:s0
@@ -10,6 +11,7 @@ persist.sys.bt.a2dp.pendingtime    u:object_r:exported_system_prop:s0
 # Camera
 aec.custom.                                           u:object_r:exported_system_prop:s0
 cam.algo.                                             u:object_r:exported_system_prop:s0
+com.oplus.camera.                                     u:object_r:exported_system_prop:s0
 service.sf.                                           u:object_r:exported_system_prop:s0
 NA                                                    u:object_r:exported_system_prop:s0
 oplus.camera.                                         u:object_r:exported_system_prop:s0
@@ -42,6 +44,8 @@ vendor.oppo.                                          u:object_r:exported_system
 vendor.property.debug.caliexif.enable                 u:object_r:exported_system_prop:s0
 
 # Display
+awb.purecolor.enable               u:object_r:exported_system_prop:s0
+persist.oplus.display.vrr.adfr     u:object_r:exported_system_prop:s0
 persist.sys.display.iris.absent    u:object_r:system_oplus_iris_prop:s0
 ro.oplus.display.                  u:object_r:exported_system_prop:s0
 
@@ -56,9 +60,12 @@ oplus.optical.        u:object_r:system_fingerprint_prop:s0
 persist.sys.fp.       u:object_r:system_fingerprint_prop:s0
 
 # Logging
+aec.custom.debug.                   u:object_r:exported_system_prop:s0
 persist.sys.assert.panic            u:object_r:exported_system_prop:s0
-persist.sys.debuglog.               u:object_r:exported_system_prop:s0
-persist.sys.log.                    u:object_r:exported_system_prop:s0
+persist.sys.debuglog.config         u:object_r:exported_system_prop:s0
+persist.sys.log.ae                  u:object_r:exported_system_prop:s0
+persist.sys.log.af                  u:object_r:exported_system_prop:s0
+persist.sys.log.awb                 u:object_r:exported_system_prop:s0
 
 # Modem
 persist.sys.enable_modem_dump    u:object_r:exported_system_prop:s0
@@ -67,11 +74,12 @@ persist.sys.enable_modem_dump    u:object_r:exported_system_prop:s0
 sys.oplus.high.performance    u:object_r:exported_system_prop:s0
 
 # Radio
-ro.build.display.full_id    u:object_r:exported_system_prop:s0
-ro.build.oplus_nv_id        u:object_r:exported_system_prop:s0
-ro.sys.reserve.integrate    u:object_r:exported_system_prop:s0
-sys.oplus_boot_mode         u:object_r:exported_system_prop:s0
-sys.oplus.radio.            u:object_r:system_oplus_radio_prop:s0
+persist.radio.oplus.qcrild_start    u:object_r:exported_system_prop:s0
+ro.build.display.full_id            u:object_r:exported_system_prop:s0
+ro.build.oplus_nv_id                u:object_r:exported_system_prop:s0
+ro.sys.reserve.integrate            u:object_r:exported_system_prop:s0
+sys.oplus_boot_mode                 u:object_r:exported_system_prop:s0
+sys.oplus.radio.                    u:object_r:system_oplus_radio_prop:s0
 
 # Region
 persist.sys.oppo.region     u:object_r:exported_system_prop:s0
@@ -81,7 +89,9 @@ ro.build.version.svn      u:object_r:exported_system_prop:s0
 ro.build.version.svn.c    u:object_r:exported_system_prop:s0
 
 # Touch
-persist.sys.tpic.    u:object_r:system_oplus_touch_prop:s0
+persist.sys.alwayson.    u:object_r:system_oplus_touch_prop:s0
+persist.sys.tpic.        u:object_r:system_oplus_touch_prop:s0
+sys.touch.game_mode      u:object_r:system_oplus_touch_prop:s0
 
 # Version
 ro.separate.soft    u:object_r:system_oplus_project_prop:s0

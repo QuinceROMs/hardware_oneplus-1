@@ -1,1 +1,3 @@
 allow vendor_vppservice public_adsprpcd_file:file r_file_perms;
+
+get_prop(vendor_vppservice, vendor_display_prop)
