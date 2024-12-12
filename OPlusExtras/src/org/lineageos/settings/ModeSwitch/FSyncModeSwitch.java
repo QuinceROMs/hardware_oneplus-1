@@ -31,7 +31,7 @@ public class FSyncModeSwitch implements OnPreferenceChangeListener {
     }
 
     public static boolean isCurrentlyEnabled(Context context) {
-        return FileUtils.getFileValueAsBoolean(getFile(context), false,
+        return FileUtils.getFileValueAsBoolean(getFile(context), true,
             context.getResources().getString(R.string.node_fsync_mode_switch_true),
             context.getResources().getString(R.string.node_fsync_mode_switch_false));
     }

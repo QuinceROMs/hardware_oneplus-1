@@ -43,9 +43,11 @@ public class Startup extends BroadcastReceiver {
         if (enabled) {
             context.startService(new Intent(context, FPSInfoService.class));
         }
-        enabled = sharedPrefs.getBoolean(OPlusExtras.KEY_FSYNC_SWITCH, false);
+        enabled = sharedPrefs.getBoolean(OPlusExtras.KEY_FSYNC_SWITCH, true);
         if (enabled) {
-            restore(FSyncModeSwitch.getFile(context), enabled);
+            restore(FSyncModeSwitch.getFile(context), "1");
+        } else {
+            restore(FSyncModeSwitch.getFile(context), "0");
         }
         enabled = sharedPrefs.getBoolean(OPlusExtras.KEY_POWERSHARE_SWITCH, false);
         if (enabled) {

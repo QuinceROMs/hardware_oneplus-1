@@ -111,7 +111,6 @@
 
         <SwitchPreference
             android:key="fsync"
-            android:defaultValue="true"
             android:title="@string/fsync_title"
             android:summary="@string/fsync_summary" />
 
