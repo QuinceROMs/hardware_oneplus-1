@@ -10,6 +10,6 @@
     <color name="alert_slider_text_color">@android:color/system_neutral1_50</color>
 
     <!-- Alert slider settings icon -->
-    <color name="slider_track_color">#FFB0B0B0</color> <!-- Light gray color for dark mode -->
-    <color name="slider_thumb_color">#FFB0B0B0</color> <!-- Black color for the thumb in dark mode -->
+    <color name="slider_track_color">#FFFFFFFF</color> <!-- Light gray color for dark mode -->
+    <color name="slider_thumb_color">#FFFFFFFF</color> <!-- Black color for the thumb in dark mode -->
 </resources>
