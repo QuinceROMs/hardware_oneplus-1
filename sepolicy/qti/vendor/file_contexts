@@ -222,6 +222,9 @@
 # NFC
 /dev/pn553    u:object_r:nfc_device:s0
 
+# OCCE
+ /odm/bin/occe_create                                                        u:object_r:occe_create_exec:s0
+
 # OSENSE
 /vendor/bin/hw/vendor\.oplus\.hardware\.osense\.client-service    u:object_r:hal_oplus_osense_aidl_exec:s0
 
