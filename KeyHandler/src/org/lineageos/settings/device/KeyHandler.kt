@@ -163,7 +163,7 @@ class KeyHandler(private val context: Context) : DeviceKeyHandler {
             }
         }
 
-        if (sharedPreferences.getBoolean(SLIDER_DIALOG_ENABLED, false)) { // Show slider dialog if enabled in preferences
+        if (sharedPreferences.getBoolean(SLIDER_DIALOG_ENABLED, true)) { // Show slider dialog if enabled in preferences
             sendNotification(getPositionFromKeyCode(keyCodeValue), keyCodeValue)
         }
 
