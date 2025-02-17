@@ -36,7 +36,7 @@ class AlertSliderPlugin : OverlayPlugin {
         object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {
                 when (intent.action) {
-                    KeyHandler.CHANGED_ACTION -> {
+                    KeyHandler.SLIDER_UPDATE_ACTION -> {
                         synchronized(dialogLock) {
                             val ringer =
                                 intent.getIntExtra("mode", NONE).takeIf { it != NONE } ?: return
@@ -71,7 +71,7 @@ class AlertSliderPlugin : OverlayPlugin {
         ambientConfig = AmbientDisplayConfiguration(context)
 
         val filter = IntentFilter().apply {
-            addAction(KeyHandler.CHANGED_ACTION)
+            addAction(KeyHandler.SLIDER_UPDATE_ACTION)
             addAction(Intent.ACTION_CONFIGURATION_CHANGED)
         }
         plugin.registerReceiver(
