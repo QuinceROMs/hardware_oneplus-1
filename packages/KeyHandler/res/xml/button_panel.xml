@@ -43,10 +43,10 @@
             android:title="@string/alert_slider_bottom_position"
             app:useSimpleSummaryProvider="true" />
 
-        <SwitchPreferenceCompat
-            android:key="config_show_dialog"
-            android:title="@string/alert_slider_notification_dialog_title"
-            android:summary="@string/alert_slider_notification_dialog_summary"
+        <SwitchPreference
+            android:key="config_slider_dialog"
+            android:title="@string/alert_slider_dialog_title"
+            android:summary="@string/alert_slider_dialog_summary"
             android:defaultValue="true" />
 
     </PreferenceCategory>
