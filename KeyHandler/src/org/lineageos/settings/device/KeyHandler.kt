@@ -186,7 +186,7 @@ class KeyHandler(private val context: Context) : DeviceKeyHandler {
         val intent =
             Intent(SLIDER_UPDATE_ACTION).apply {
                 putExtra("position", position)
-                putExtra("mode", mode)
+                putExtra("position_value", mode)
             }
         context.sendBroadcastAsUser(intent, UserHandle(UserHandle.USER_CURRENT))
     }

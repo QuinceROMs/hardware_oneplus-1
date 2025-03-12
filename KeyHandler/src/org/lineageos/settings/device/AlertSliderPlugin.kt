@@ -39,7 +39,7 @@ class AlertSliderPlugin : OverlayPlugin {
                     KeyHandler.SLIDER_UPDATE_ACTION -> {
                         synchronized(dialogLock) {
                             val ringer =
-                                intent.getIntExtra("mode", NONE).takeIf { it != NONE } ?: return
+                                intent.getIntExtra("position_value", NONE).takeIf { it != NONE } ?: return
 
                             handler
                                 .obtainMessage(
@@ -180,7 +180,7 @@ class AlertSliderPlugin : OverlayPlugin {
         private const val MSG_DIALOG_RESET = 3
         private const val MSG_DIALOG_UPDATE = 4
         private const val MSG_DIALOG_RECREATE = 5
-        private const val DIALOG_TIMEOUT = 3000L
+        private const val DIALOG_TIMEOUT = 2000L
 
         // Ringer mode
         private const val NONE = -1
