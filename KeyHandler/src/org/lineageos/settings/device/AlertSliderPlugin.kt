@@ -33,6 +33,7 @@ class AlertSliderPlugin : OverlayPlugin, LifecycleObserver {
     private lateinit var ambientConfig: AmbientDisplayConfiguration
     private val dialogLock = Any()
     private var isSetupWizardRunning = false
+    private var statusBarView: View? = null
     private var navBarView: View? = null
     private var lastConfigChangeTime = 0L
     private var adaptiveDelay = 250L
@@ -135,9 +136,10 @@ class AlertSliderPlugin : OverlayPlugin, LifecycleObserver {
         pluginContext.unregisterReceiver(updateReceiver)
     }
 
-    override fun setup(statusBar: View, navBar: View?) {
+    override fun setup(statusBar: View?, navBar: View?) {
+        statusBarView = statusBar
         navBarView = navBar
-        isSetupWizardRunning = isInSetupMode(statusBar.context)
+        isSetupWizardRunning = statusBar?.context?.let { isInSetupMode(it) } ?: false
     }
 
     private fun isInSetupMode(context: Context): Boolean {
