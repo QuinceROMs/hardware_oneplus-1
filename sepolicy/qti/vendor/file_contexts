@@ -154,6 +154,10 @@
 /mnt/vendor/persist/camera(/.*)?                                                u:object_r:vendor_persist_camera_file:s0
 /mnt/vendor/persist/dual_camera_calibration(/.*)?                               u:object_r:vendor_persist_camera_file:s0
 
+# CameraMDM
+/(vendor|system/vendor)/bin/hw/vendor\.oplus\.hardware\.cameraMDM@1\.0-service    u:object_r:vendor_hal_cameraMDM_default_exec:s0
+/(vendor|system/vendor)/bin/hw/vendor\.oplus\.hardware\.cameraMDM@2\.0-service    u:object_r:vendor_hal_cameraMDM_default_exec:s0
+
 # Cammidasservice
 /(odm|vendor/odm)/bin/hw/vendor\.oplus\.hardware\.cammidasservice-V1-service    u:object_r:hal_oplus_cammidasservice_aidl_exec:s0
 /vendor/bin/hw/vendor\.oplus\.hardware\.cameraMDM@1\.0-service                  u:object_r:vendor_hal_cameraMDM_default_exec:s0

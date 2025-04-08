@@ -9,6 +9,8 @@ allow opluscamera_app vendor_hal_camera_postproc_hwservice:hwservice_manager fin
 allow opluscamera_app vendor_hal_orms_hwservice:hwservice_manager find;
 
 allow opluscamera_app adsprpcd_file:dir r_dir_perms;
+allow opluscamera_app vendor_qdsp_device:chr_file rw_file_perms;
+allow opluscamera_app vendor_xdsp_device:chr_file r_file_perms;
 
 allow opluscamera_app vendor_camera_update_data_file:dir rw_dir_perms;
 allow opluscamera_app vendor_camera_update_data_file:file create_file_perms;
