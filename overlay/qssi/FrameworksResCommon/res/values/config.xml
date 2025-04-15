@@ -35,6 +35,9 @@
          states. -->
     <bool name="config_dozeAlwaysOnDisplayAvailable">true</bool>
 
+    <!-- Whether the wake screen on notifications feature is available. -->
+    <bool name="config_pulseOnNotificationsAvailable">true</bool>
+
     <!-- Whether UI for multi user should be shown -->
     <bool name="config_enableMultiUserUI">true</bool>
 
