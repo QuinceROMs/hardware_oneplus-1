@@ -53,10 +53,9 @@ class DolbyAudioEffect(priority: Int, audioSession: Int) : AudioEffect(
 
     fun setDapParameter(param: DsParam, values: IntArray, profile: Int = this.profile) {
         dlog(TAG, "setDapParameter: profile=$profile param=$param")
-        val length = values.size
-        val buf = ByteArray((length + 4) * 4)
+        val buf = ByteArray((values.size + 4) * 4)
         int32ToByteArray(EFFECT_PARAM_SET_PROFILE_PARAMETER, buf, 0)
-        int32ToByteArray(length + 1, buf, 4)
+        int32ToByteArray(values.size + 1, buf, 4)
         int32ToByteArray(profile, buf, 8)
         int32ToByteArray(param.id, buf, 12)
         int32ArrayToByteArray(values, buf, 16)
@@ -71,11 +70,10 @@ class DolbyAudioEffect(priority: Int, audioSession: Int) : AudioEffect(
 
     fun getDapParameter(param: DsParam, profile: Int = this.profile): IntArray {
         dlog(TAG, "getDapParameter: profile=$profile param=$param")
-        val length = param.length
-        val buf = ByteArray((length + 2) * 4)
+        val buf = ByteArray((param.length + 2) * 4)
         val p = (param.id shl 16) + (profile shl 8) + EFFECT_PARAM_GET_PROFILE_PARAMETER
         checkStatus(getParameter(p, buf))
-        return byteArrayToInt32Array(buf, length)
+        return byteArrayToInt32Array(buf, param.length)
     }
 
     fun getDapParameterBool(param: DsParam, profile: Int = this.profile): Boolean =
@@ -85,50 +83,50 @@ class DolbyAudioEffect(priority: Int, audioSession: Int) : AudioEffect(
         getDapParameter(param, profile)[0]
 
     companion object {
-        private const val TAG = "DolbyAudioEffect"
-        private val EFFECT_TYPE_DAP =
+        internal const val TAG = "DolbyAudioEffect"
+        internal val EFFECT_TYPE_DAP =
             UUID.fromString("9d4921da-8225-4f29-aefa-39537a04bcaa")
 
-        private const val EFFECT_PARAM_ENABLE = 0
-        private const val EFFECT_PARAM_CPDP_VALUES = 5
-        private const val EFFECT_PARAM_PROFILE = 0xA000000
-        private const val EFFECT_PARAM_SET_PROFILE_PARAMETER = 0x1000000
-        private const val EFFECT_PARAM_GET_PROFILE_PARAMETER = 0x1000005
-        private const val EFFECT_PARAM_RESET_PROFILE_SETTINGS = 0xC000000
+        internal const val EFFECT_PARAM_ENABLE = 0
+        internal const val EFFECT_PARAM_CPDP_VALUES = 5
+        internal const val EFFECT_PARAM_PROFILE = 0xA000000
+        internal const val EFFECT_PARAM_SET_PROFILE_PARAMETER = 0x1000000
+        internal const val EFFECT_PARAM_GET_PROFILE_PARAMETER = 0x1000005
+        internal const val EFFECT_PARAM_RESET_PROFILE_SETTINGS = 0xC000000
 
         private fun int32ToByteArray(value: Int, dst: ByteArray, index: Int) {
-            var idx = index
-            dst[idx++] = (value and 0xff).toByte()
-            dst[idx++] = ((value ushr 8) and 0xff).toByte()
-            dst[idx++] = ((value ushr 16) and 0xff).toByte()
-            dst[idx] = ((value ushr 24) and 0xff).toByte()
+            dst[index] = (value and 0xFF).toByte()
+            dst[index + 1] = ((value ushr 8) and 0xFF).toByte()
+            dst[index + 2] = ((value ushr 16) and 0xFF).toByte()
+            dst[index + 3] = ((value ushr 24) and 0xFF).toByte()
         }
 
         private fun byteArrayToInt32(ba: ByteArray): Int {
-            return ((ba[3].toInt() and 0xff) shl 24) or
-                    ((ba[2].toInt() and 0xff) shl 16) or
-                    ((ba[1].toInt() and 0xff) shl 8) or
-                    (ba[0].toInt() and 0xff)
+            return (ba[3].toInt() shl 24) or
+                    (ba[2].toInt() and 0xFF shl 16) or
+                    (ba[1].toInt() and 0xFF shl 8) or
+                    (ba[0].toInt() and 0xFF)
         }
 
         private fun int32ArrayToByteArray(src: IntArray, dst: ByteArray, index: Int) {
-            var idx = index
-            for (x in src) {
-                dst[idx++] = (x and 0xff).toByte()
-                dst[idx++] = ((x ushr 8) and 0xff).toByte()
-                dst[idx++] = ((x ushr 16) and 0xff).toByte()
-                dst[idx++] = ((x ushr 24) and 0xff).toByte()
+            for (i in src.indices) {
+                val pos = index + i * 4
+                val x = src[i]
+                dst[pos] = (x and 0xFF).toByte()
+                dst[pos + 1] = ((x ushr 8) and 0xFF).toByte()
+                dst[pos + 2] = ((x ushr 16) and 0xFF).toByte()
+                dst[pos + 3] = ((x ushr 24) and 0xFF).toByte()
             }
         }
 
         private fun byteArrayToInt32Array(ba: ByteArray, dstLength: Int): IntArray {
-            val srcLength = ba.size shr 2
-            val dst = IntArray(dstLength.coerceAtMost(srcLength))
+            val dst = IntArray(dstLength.coerceAtMost(ba.size shr 2))
             for (i in dst.indices) {
-                dst[i] = ((ba[i * 4 + 3].toInt() and 0xff) shl 24) or
-                        ((ba[i * 4 + 2].toInt() and 0xff) shl 16) or
-                        ((ba[i * 4 + 1].toInt() and 0xff) shl 8) or
-                        (ba[i * 4].toInt() and 0xff)
+                val base = i * 4
+                dst[i] = (ba[base + 3].toInt() and 0xFF shl 24) or
+                        (ba[base + 2].toInt() and 0xFF shl 16) or
+                        (ba[base + 1].toInt() and 0xFF shl 8) or
+                        (ba[base].toInt() and 0xFF)
             }
             return dst
         }
