@@ -6,10 +6,9 @@
 package org.lineageos.settings.device
 
 import android.app.NotificationManager
-import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
+import android.content.SharedPreferences
 import android.media.AudioManager
 import android.media.AudioSystem
 import android.os.Handler
@@ -43,33 +42,7 @@ class KeyHandler(private val context: Context) : DeviceKeyHandler {
     private var needsRun = false
     private var prevKeyCode = 0
 
-    private var wasMuted = false
-    private val broadcastReceiver =
-        object : BroadcastReceiver() {
-            override fun onReceive(context: Context, intent: Intent) {
-                when (intent.action) {
-                    AudioManager.STREAM_MUTE_CHANGED_ACTION -> {
-                        val stream = intent.getIntExtra(AudioManager.EXTRA_VOLUME_STREAM_TYPE, -1)
-                        val state =
-                            intent.getBooleanExtra(AudioManager.EXTRA_STREAM_VOLUME_MUTED, false)
-                        if (stream == AudioSystem.STREAM_MUSIC && !state) {
-                            wasMuted = false
-                        }
-                    }
-
-                    Intent.ACTION_BOOT_COMPLETED -> populateKeyState(false)
-                }
-            }
-        }
-
     init {
-        context.registerReceiver(
-            broadcastReceiver,
-            IntentFilter().apply {
-                addAction(AudioManager.STREAM_MUTE_CHANGED_ACTION)
-                addAction(Intent.ACTION_BOOT_COMPLETED)
-            },
-        )
         val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager 
         vibrator = vibratorManager?.defaultVibrator ?: (context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator)
 
@@ -78,7 +51,7 @@ class KeyHandler(private val context: Context) : DeviceKeyHandler {
         }
     }
 
-    private val supportedSliderZenModes: Map<Int, Int> = mapOf( // Explicit type for map
+    private val supportedSliderZenModes: Map<Int, Int> = mapOf(
         KEY_VALUE_TOTAL_SILENCE to Settings.Global.ZEN_MODE_NO_INTERRUPTIONS,
         KEY_VALUE_SILENT to Settings.Global.ZEN_MODE_OFF,
         KEY_VALUE_PRIORITY_ONLY to Settings.Global.ZEN_MODE_IMPORTANT_INTERRUPTIONS,
@@ -86,25 +59,33 @@ class KeyHandler(private val context: Context) : DeviceKeyHandler {
         KEY_VALUE_NORMAL to Settings.Global.ZEN_MODE_OFF
     )
 
-    private val supportedSliderRingModes: Map<Int, Int> = mapOf( // Explicit type for map
-        KEY_VALUE_TOTAL_SILENCE to AudioManager.RINGER_MODE_NORMAL, // Note: Consider if SILENT is more appropriate for "Total Silence"
+    private val supportedSliderRingModes: Map<Int, Int> = mapOf(
+        KEY_VALUE_TOTAL_SILENCE to AudioManager.RINGER_MODE_NORMAL,
         KEY_VALUE_SILENT to AudioManager.RINGER_MODE_SILENT,
         KEY_VALUE_PRIORITY_ONLY to AudioManager.RINGER_MODE_NORMAL,
         KEY_VALUE_VIBRATE to AudioManager.RINGER_MODE_VIBRATE,
         KEY_VALUE_NORMAL to AudioManager.RINGER_MODE_NORMAL
     )
 
-    private val supportedSliderHaptics: Map<Int, VibrationEffect?> = mapOf( // Explicit type for map
-        KEY_VALUE_TOTAL_SILENCE to VibrationEffect.EFFECT_THUD?.let { VibrationEffect.get(it) }, // Use let to handle nullable EFFECT_THUD
-        KEY_VALUE_SILENT to VibrationEffect.EFFECT_DOUBLE_CLICK?.let { VibrationEffect.get(it) },
-        KEY_VALUE_PRIORITY_ONLY to VibrationEffect.EFFECT_POP?.let { VibrationEffect.get(it) },
-        KEY_VALUE_VIBRATE to VibrationEffect.EFFECT_HEAVY_CLICK?.let { VibrationEffect.get(it) },
-        KEY_VALUE_NORMAL to null // Or VibrationEffect.EFFECT_TICK, or keep null for no haptic
+    private val supportedSliderHaptics: Map<Int, Int?> = mapOf(
+        KEY_VALUE_TOTAL_SILENCE to VibrationEffect.EFFECT_THUD,
+        KEY_VALUE_SILENT to VibrationEffect.EFFECT_DOUBLE_CLICK,
+        KEY_VALUE_PRIORITY_ONLY to VibrationEffect.EFFECT_POP,
+        KEY_VALUE_VIBRATE to VibrationEffect.EFFECT_HEAVY_CLICK,
+        KEY_VALUE_NORMAL to null
     )
 
+    private fun hasSetupCompleted(): Boolean {
+        return Settings.Secure.getInt(context.contentResolver,
+                Settings.Secure.USER_SETUP_COMPLETE, 0) != 0
+    }
 
     override fun handleKeyEvent(event: KeyEvent): KeyEvent? {
         if (event.action != KeyEvent.ACTION_UP) { // Only handle ACTION_UP event
+            return event
+        }
+
+        if (!hasSetupCompleted()) {
             return event
         }
 
@@ -118,13 +99,12 @@ class KeyHandler(private val context: Context) : DeviceKeyHandler {
             return event
         }
 
-        populateKeyState(true)
-        
-        val keyCodeValue = when (File("/proc/tristatekey/tri_state").readText().trim()) {
-            "1" -> sharedPreferences.getString(ALERT_SLIDER_TOP_KEY, "0")!!.toInt()
-            "2" -> sharedPreferences.getString(ALERT_SLIDER_MIDDLE_KEY, "1")!!.toInt()
-            "3" -> sharedPreferences.getString(ALERT_SLIDER_BOTTOM_KEY, "2")!!.toInt()
-            else -> return event // Or handle as needed, maybe return null to consume event?
+        val scanCode = File("/proc/tristatekey/tri_state").readText().trim().toInt()
+        val keyCodeValue = when (scanCode) {
+            1 -> sharedPreferences.getString(ALERT_SLIDER_TOP_KEY, "0")!!.toInt()
+            2 -> sharedPreferences.getString(ALERT_SLIDER_MIDDLE_KEY, "1")!!.toInt()
+            3 -> sharedPreferences.getString(ALERT_SLIDER_BOTTOM_KEY, "2")!!.toInt()
+            else -> return event
         }
 
         needsRun = false
@@ -133,13 +113,13 @@ class KeyHandler(private val context: Context) : DeviceKeyHandler {
         if (prevKeyCode == KEY_VALUE_TOTAL_SILENCE && keyCodeValue != prevKeyCode) {
             // If previous mode was total silence, vibrate after setting ringer mode for it to take effect.
             // Exit total silence zen mode before setting ringer mode internally.
-            val targetRingerMode = supportedSliderRingModes[keyCodeValue] ?: AudioManager.RINGER_MODE_NORMAL // Default if not found
-            val targetZenMode = supportedSliderZenModes[keyCodeValue] ?: Settings.Global.ZEN_MODE_OFF // Default if not found
+            val targetRingerMode = supportedSliderRingModes[keyCodeValue] ?: AudioManager.RINGER_MODE_NORMAL
+            val targetZenMode = supportedSliderZenModes[keyCodeValue] ?: Settings.Global.ZEN_MODE_OFF
 
             notificationManager.setZenMode(targetZenMode, null, TAG)
             audioManager.ringerModeInternal = targetRingerMode
 
-            doHapticFeedback(supportedSliderHaptics[keyCodeValue])
+            doHapticFeedback(supportedSliderHaptics[keyCodeValue] ?: -1)
 
             needsRun = true
             handler.postDelayed({
@@ -148,7 +128,7 @@ class KeyHandler(private val context: Context) : DeviceKeyHandler {
                 }
             }, 200) // 200ms delay to ensure ringer mode is set correctly
         } else {
-            doHapticFeedback(supportedSliderHaptics[keyCodeValue])
+            doHapticFeedback(supportedSliderHaptics[keyCodeValue] ?: -1)
 
             val targetRingerMode = supportedSliderRingModes[keyCodeValue] ?: AudioManager.RINGER_MODE_NORMAL
             val targetZenMode = supportedSliderZenModes[keyCodeValue] ?: Settings.Global.ZEN_MODE_OFF
@@ -163,20 +143,23 @@ class KeyHandler(private val context: Context) : DeviceKeyHandler {
             val currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
 
             if (keyCodeValue == KEY_VALUE_SILENT) {
-                KeyHandler.setLastMediaLevel(packageContext, Math.round((currentVolume.toFloat() * 100f) / max.toFloat()).toInt()) // Call via Companion and toInt()
+                KeyHandler.setLastMediaLevel(
+                    sharedPreferences,
+                    Math.round((currentVolume.toFloat() * 100f) / max.toFloat()).toInt()
+                )
                 audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, 0, AudioManager.FLAG_SHOW_UI)
             } else if (prevKeyCode == KEY_VALUE_SILENT && currentVolume == 0) {
-                val lastVolume = KeyHandler.getLastMediaLevel(packageContext) // Call via Companion
+                val lastVolume = KeyHandler.getLastMediaLevel(sharedPreferences)
                 audioManager.setStreamVolume(
                     AudioManager.STREAM_MUSIC,
-                    Math.round((max.toFloat() * lastVolume.toFloat()) / 100f).toInt(), // toInt()
+                    Math.round((max.toFloat() * lastVolume.toFloat()) / 100f).toInt(),
                     AudioManager.FLAG_SHOW_UI
                 )
             }
         }
 
-        if (sharedPreferences.getBoolean(SLIDER_DIALOG_ENABLED, true)) { // Show slider dialog if enabled in preferences
-            sendNotification(getPositionFromKeyCode(keyCodeValue), keyCodeValue)
+        if (sharedPreferences.getBoolean(SLIDER_DIALOG_ENABLED, true)) {
+            sendNotification(scanCode, keyCodeValue)
         }
 
         prevKeyCode = keyCodeValue
@@ -188,9 +171,9 @@ class KeyHandler(private val context: Context) : DeviceKeyHandler {
     }
 
 
-    private fun doHapticFeedback(effect: VibrationEffect?) {
-        if (vibrator != null && vibrator.hasVibrator() && effect != null) {
-            vibrator.vibrate(effect)
+    private fun doHapticFeedback(effect: Int) {
+        if (vibrator != null && vibrator.hasVibrator() && effect != -1) {
+            vibrator.vibrate(VibrationEffect.get(effect))
         }
     }
 
@@ -202,16 +185,6 @@ class KeyHandler(private val context: Context) : DeviceKeyHandler {
             }
         context.sendBroadcastAsUser(intent, UserHandle(UserHandle.USER_CURRENT))
     }
-
-    private fun getPositionFromKeyCode(keyCodeValue: Int): Int {
-        return when (keyCodeValue) {
-            sharedPreferences.getString(ALERT_SLIDER_TOP_KEY, "0")!!.toInt() -> POSITION_TOP
-            sharedPreferences.getString(ALERT_SLIDER_MIDDLE_KEY, "1")!!.toInt() -> POSITION_MIDDLE
-            sharedPreferences.getString(ALERT_SLIDER_BOTTOM_KEY, "2")!!.toInt() -> POSITION_BOTTOM
-            else -> 0 // Default case if key code doesn't match any position
-        }
-    }
-
 
     companion object {
         private const val TAG = "KeyHandler"
@@ -228,40 +201,23 @@ class KeyHandler(private val context: Context) : DeviceKeyHandler {
         private const val ALERT_SLIDER_MIDDLE_KEY = "config_middle_position"
         private const val ALERT_SLIDER_BOTTOM_KEY = "config_bottom_position"
         private const val MUTE_MEDIA_WITH_SILENT = "config_mute_media"
-        private const val SLIDER_DIALOG_ENABLED = "config_slider_dialog" // Preference to enable/disable dialog
+        private const val SLIDER_DIALOG_ENABLED = "config_slider_dialog"
 
-        // Key Values - Slider modes as integer values
-        const val KEY_VALUE_TOTAL_SILENCE = 0 // "Total Silence" slider mode
-        const val KEY_VALUE_SILENT = AudioManager.RINGER_MODE_SILENT
-        const val KEY_VALUE_PRIORITY_ONLY = 3 // "Priority Only" slider mode
-        const val KEY_VALUE_VIBRATE = AudioManager.RINGER_MODE_VIBRATE
-        const val KEY_VALUE_NORMAL = AudioManager.RINGER_MODE_NORMAL
-
-        // ZEN constants - Make these public to be accessible from AlertSliderDialog
-        public const val ZEN_PRIORITY_ONLY = 3 // Re-declare ZEN constants here, same values as before if needed for AlertSliderDialog
-        public const val ZEN_TOTAL_SILENCE = 4
-        public const val ZEN_ALARMS_ONLY = 5
-
+        const val KEY_VALUE_NORMAL = 0
+        const val KEY_VALUE_VIBRATE = 1
+        const val KEY_VALUE_SILENT = 2
+        const val KEY_VALUE_PRIORITY_ONLY = 3
+        const val KEY_VALUE_TOTAL_SILENCE = 4
 
         // Helper functions
-        @JvmStatic // To be callable from Java if needed
-        fun setLastMediaLevel(context: Context, level: Int) {
-            val packageContext =
-                context.createPackageContext(KeyHandler::class.java.getPackage()!!.name, 0)
-            packageContext.getSharedPreferences(
-                packageContext.packageName + "_preferences",
-                Context.MODE_PRIVATE or Context.MODE_MULTI_PROCESS
-            ).edit().putInt("last_media_level", level).apply()
+        @JvmStatic
+        fun setLastMediaLevel(prefs: SharedPreferences, level: Int) {
+            prefs.edit().putInt("last_media_level", level).commit()
         }
 
         @JvmStatic
-        fun getLastMediaLevel(context: Context): Int {
-            val packageContext =
-                context.createPackageContext(KeyHandler::class.java.getPackage()!!.name, 0)
-            return packageContext.getSharedPreferences(
-                packageContext.packageName + "_preferences",
-                Context.MODE_PRIVATE or Context.MODE_MULTI_PROCESS
-            ).getInt("last_media_level", 50) // Default to 50 if not set
+        fun getLastMediaLevel(prefs: SharedPreferences): Int {
+            return prefs.getInt("last_media_level", 50)
         }
     }
 }
