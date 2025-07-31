@@ -110,17 +110,16 @@ class KeyHandler(private val context: Context) : DeviceKeyHandler {
         needsRun = false
         handler.removeCallbacksAndMessages(null)
 
+        val targetRingerMode = supportedSliderRingModes[keyCodeValue] ?: AudioManager.RINGER_MODE_NORMAL
+        val targetZenMode = supportedSliderZenModes[keyCodeValue] ?: Settings.Global.ZEN_MODE_OFF
+        val targetHaptic = supportedSliderHaptics[keyCodeValue] ?: -1
         if (prevKeyCode == KEY_VALUE_TOTAL_SILENCE && keyCodeValue != prevKeyCode) {
-            // If previous mode was total silence, vibrate after setting ringer mode for it to take effect.
-            // Exit total silence zen mode before setting ringer mode internally.
-            val targetRingerMode = supportedSliderRingModes[keyCodeValue] ?: AudioManager.RINGER_MODE_NORMAL
-            val targetZenMode = supportedSliderZenModes[keyCodeValue] ?: Settings.Global.ZEN_MODE_OFF
-
+            // if previous was total silence we need to vibrate after setRingerModeInternal
+            // for it to actually fire.
+            // we also have to exit it before setRingerModeInternal because it sets it internally
             notificationManager.setZenMode(targetZenMode, null, TAG)
             audioManager.ringerModeInternal = targetRingerMode
-
-            doHapticFeedback(supportedSliderHaptics[keyCodeValue] ?: -1)
-
+            doHapticFeedback(targetHaptic)
             needsRun = true
             handler.postDelayed({
                 if (audioManager.ringerModeInternal != targetRingerMode && needsRun) {
@@ -128,20 +127,20 @@ class KeyHandler(private val context: Context) : DeviceKeyHandler {
                 }
             }, 200) // 200ms delay to ensure ringer mode is set correctly
         } else {
-            doHapticFeedback(supportedSliderHaptics[keyCodeValue] ?: -1)
-
-            val targetRingerMode = supportedSliderRingModes[keyCodeValue] ?: AudioManager.RINGER_MODE_NORMAL
-            val targetZenMode = supportedSliderZenModes[keyCodeValue] ?: Settings.Global.ZEN_MODE_OFF
-
+            // here we have to vibrate before setting anything else.
+            // also setRingerModeInternal before setZenMode because it could set the ringer mode
+            doHapticFeedback(targetHaptic)
             audioManager.ringerModeInternal = targetRingerMode
-            notificationManager.setZenMode(targetZenMode, null, TAG)
+            val zenKeepEnabled = sharedPreferences.getBoolean(ZEN_KEEP_ENABLED, false)
+            if (!zenKeepEnabled || targetZenMode != Settings.Global.ZEN_MODE_OFF) {
+                // if zen keep is enabled we only transition into zen mode, not out of it
+                notificationManager.setZenMode(targetZenMode, null, TAG)
+            }
         }
-
 
         if (sharedPreferences.getBoolean(MUTE_MEDIA_WITH_SILENT, false)) {
             val max = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
             val currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
-
             if (keyCodeValue == KEY_VALUE_SILENT) {
                 KeyHandler.setLastMediaLevel(
                     sharedPreferences,
@@ -202,6 +201,10 @@ class KeyHandler(private val context: Context) : DeviceKeyHandler {
         private const val ALERT_SLIDER_BOTTOM_KEY = "config_bottom_position"
         private const val MUTE_MEDIA_WITH_SILENT = "config_mute_media"
         private const val SLIDER_DIALOG_ENABLED = "config_slider_dialog"
+        private const val ZEN_KEEP_ENABLED = "config_zen_keep"
+
+        const val SLIDER_DOZE_ENABLED = "config_slider_doze_enabled"
+        const val SLIDER_DOZE_ENABLED_SETTING = "device_settings_" + SLIDER_DOZE_ENABLED
 
         const val KEY_VALUE_NORMAL = 0
         const val KEY_VALUE_VIBRATE = 1
@@ -218,6 +221,12 @@ class KeyHandler(private val context: Context) : DeviceKeyHandler {
         @JvmStatic
         fun getLastMediaLevel(prefs: SharedPreferences): Int {
             return prefs.getInt("last_media_level", 50)
+        }
+
+        @JvmStatic
+        fun isSliderDozeEnabled(context: Context): Boolean {
+            return Settings.System.getInt(context.contentResolver,
+                SLIDER_DOZE_ENABLED_SETTING, 1) == 1
         }
     }
 }

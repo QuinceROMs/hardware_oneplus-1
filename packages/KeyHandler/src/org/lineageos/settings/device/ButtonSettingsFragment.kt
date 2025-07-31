@@ -6,10 +6,33 @@
 package org.lineageos.settings.device
 
 import android.os.Bundle
-import com.android.settingslib.widget.SettingsBasePreferenceFragment
+import android.provider.Settings
+import androidx.preference.Preference
+import androidx.preference.PreferenceFragmentCompat
+import androidx.preference.SwitchPreferenceCompat
 
-class ButtonSettingsFragment : SettingsBasePreferenceFragment() {
+class ButtonSettingsFragment : PreferenceFragmentCompat(), Preference.OnPreferenceChangeListener {
+    private lateinit var sliderDozeSwitch: SwitchPreferenceCompat
+
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         setPreferencesFromResource(R.xml.button_panel, rootKey)
+
+        sliderDozeSwitch = findPreference<SwitchPreferenceCompat>(KeyHandler.SLIDER_DOZE_ENABLED)!!
+        sliderDozeSwitch.isChecked = KeyHandler.isSliderDozeEnabled(requireContext())
+        sliderDozeSwitch.onPreferenceChangeListener = this
     }
+
+    override fun onPreferenceChange(preference: Preference, newValue: Any): Boolean {
+        if (preference == sliderDozeSwitch) {
+            val enabled = newValue as Boolean
+            Settings.System.putInt(context!!.contentResolver,
+                    KeyHandler.SLIDER_DOZE_ENABLED_SETTING, if (enabled) 1 else 0)
+            return true
+        }
+        return false
+    }
+
+    companion object {
+
+    } 
 }
