@@ -81,10 +81,6 @@ class KeyHandler(private val context: Context) : DeviceKeyHandler {
     }
 
     override fun handleKeyEvent(event: KeyEvent): KeyEvent? {
-        if (event.action != KeyEvent.ACTION_UP) { // Only handle ACTION_UP event
-            return event
-        }
-
         if (!hasSetupCompleted()) {
             return event
         }
@@ -105,6 +101,10 @@ class KeyHandler(private val context: Context) : DeviceKeyHandler {
             2 -> sharedPreferences.getString(ALERT_SLIDER_MIDDLE_KEY, "1")!!.toInt()
             3 -> sharedPreferences.getString(ALERT_SLIDER_BOTTOM_KEY, "2")!!.toInt()
             else -> return event
+        }
+
+        if (event.action != KeyEvent.ACTION_UP) { // Only handle ACTION_UP event
+            return null
         }
 
         needsRun = false
