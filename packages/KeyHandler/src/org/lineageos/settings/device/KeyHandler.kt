@@ -97,9 +97,9 @@ class KeyHandler(private val context: Context) : DeviceKeyHandler {
 
         val scanCode = File("/proc/tristatekey/tri_state").readText().trim().toInt()
         val keyCodeValue = when (scanCode) {
-            1 -> sharedPreferences.getString(ALERT_SLIDER_TOP_KEY, "0")!!.toInt()
+            1 -> sharedPreferences.getString(ALERT_SLIDER_TOP_KEY, "2")!!.toInt()
             2 -> sharedPreferences.getString(ALERT_SLIDER_MIDDLE_KEY, "1")!!.toInt()
-            3 -> sharedPreferences.getString(ALERT_SLIDER_BOTTOM_KEY, "2")!!.toInt()
+            3 -> sharedPreferences.getString(ALERT_SLIDER_BOTTOM_KEY, "0")!!.toInt()
             else -> return event
         }
 
