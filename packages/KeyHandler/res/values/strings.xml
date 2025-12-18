@@ -24,4 +24,6 @@
     <string name="alert_slider_doze_enabled_summary">Pulse doze to show the dialog when the screen is off</string>
     <string name="alert_slider_zen_keep_title">Keep zen</string>
     <string name="alert_slider_zen_keep_summary">Slider would only enable Do Not Disturb but never disable it\nDoes not apply to total silence</string>
+    <string name="alert_slider_positions_category_title">Slider Positions</string>
+    <string name="alert_slider_options_category_title">Extra Settings</string>
 </resources>
