@@ -1,1 +1,9 @@
 allow priv_app oem_service:service_manager find;
+
+# OnePlus Camera
+typeattribute priv_app_36 halclientdomain;
+typeattribute priv_app_36 vendor_hal_cameraMDM_client;
+allow priv_app_36 adsprpcd_file:dir r_dir_perms;
+allow priv_app_36 vendor_xdsp_device:chr_file rw_file_perms;
+dontaudit priv_app_36 adsprpcd_file:file read;
+dontaudit priv_app_36 vendor_sysfs_kgsl:file read;
