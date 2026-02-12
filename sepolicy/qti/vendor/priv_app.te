@@ -1,1 +1,27 @@
 allow priv_app oem_service:service_manager find;
+
+# OnePlus Camera HAL client permissions
+# Use direct typeattribute instead of hal_client_domain() to avoid
+# not_full_treble passthrough grants that cause neverallow in recovery policy
+typeattribute priv_app halclientdomain;
+typeattribute priv_app hal_camera_client;
+typeattribute priv_app vendor_hal_dspmanager_client;
+typeattribute priv_app vendor_hal_cameraMDM_client;
+
+allow priv_app vendor_hal_orms_hwservice:hwservice_manager find;
+allow priv_app vendor_hal_performance_hwservice:hwservice_manager find;
+
+allow priv_app adsprpcd_file:dir r_dir_perms;
+allow priv_app vendor_xdsp_device:chr_file rw_file_perms;
+
+# priv_app (coredomain) cannot access vendor_file_type files (neverallow in domain.te)
+# Scene classification DSP offloading goes through hal_camera_default instead
+dontaudit priv_app adsprpcd_file:file read;
+
+allow priv_app vendor_camera_update_data_file:dir rw_dir_perms;
+allow priv_app vendor_camera_update_data_file:file create_file_perms;
+r_dir_file(priv_app, vendor_persist_camera_file)
+
+# Suppress non-critical denials from OnePlus Camera scene detection
+dontaudit priv_app vendor_sysfs_battery_supply:file read;
+dontaudit priv_app vendor_sysfs_kgsl:file read;

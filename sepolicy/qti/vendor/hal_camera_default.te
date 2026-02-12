@@ -10,6 +10,7 @@ hal_client_domain(hal_camera_default, vendor_hal_oplus_osense)
 hal_client_domain(hal_camera_default, vendor_hal_oplus_performance)
 hal_client_domain(hal_camera_default, vendor_hal_oplus_urcc)
 hal_client_domain(hal_camera_default, vendor_hal_qspmhal)
+hal_client_domain(hal_camera_default, vendor_hal_vpp)
 
 add_service(hal_camera_default, hal_oplus_aon_aidl_service)
 
@@ -25,6 +26,13 @@ allow hal_camera_default vendor_hal_orms_hwservice:hwservice_manager find;
 allow hal_camera_default vendor_hal_osense_hwservice:hwservice_manager find;
 
 allow hal_camera_default public_adsprpcd_file:file r_file_perms;
+
+# FastRPC DSP access for arcsoft bokeh depth processing (CDSP offloading)
+# QCOM base policy only grants read; OOS grants read+write for both devices.
+# vendor_qdsp_device = /dev/adsprpc-smd (non-secure FastRPC)
+# vendor_xdsp_device = /dev/adsprpc-smd-secure (secure FastRPC, used by CDSP)
+allow hal_camera_default vendor_qdsp_device:chr_file rw_file_perms;
+allow hal_camera_default vendor_xdsp_device:chr_file rw_file_perms;
 
 allow hal_camera_default input_device:chr_file rw_file_perms;
 allow hal_camera_default vendor_camera_turbo_device:chr_file rw_file_perms;
@@ -52,3 +60,11 @@ rw_dir_file(hal_camera_default, vendor_proc_camera)
 rw_dir_file(hal_camera_default, vendor_sysfs_tof)
 
 set_prop(hal_camera_default, vendor_camera_prop)
+
+# VPP data access (types defined in Qualcomm sepolicy_vndr)
+allow hal_camera_default vendor_vpp_data_file:dir create_dir_perms;
+allow hal_camera_default vendor_vpp_data_file:file create_file_perms;
+allow hal_camera_default vendor_camera_data_file:dir create_dir_perms;
+allow hal_camera_default vendor_camera_data_file:file create_file_perms;
+allow hal_camera_default vendor_persist_vpp_file:dir r_dir_perms;
+allow hal_camera_default vendor_persist_vpp_file:file r_file_perms;
