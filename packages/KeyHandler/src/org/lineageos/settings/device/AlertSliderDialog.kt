@@ -186,6 +186,7 @@ class AlertSliderDialog(private var context: Context) :
 
         sTextResMap.get(ringerMode)?.let { textView!!.setText(it) }
             ?: run { textView!!.setText(R.string.alert_slider_mode_normal) }
+        textView!!.setTextColor(context.getColor(R.color.alert_slider_text_color))
     }
 
     private fun applyOnEnd(endX: Int, endY: Int, position: Int) {
