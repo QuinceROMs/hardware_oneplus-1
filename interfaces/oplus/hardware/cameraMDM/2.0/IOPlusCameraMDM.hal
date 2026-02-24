@@ -6,15 +6,15 @@
 package vendor.oplus.hardware.cameraMDM@2.0;
 
 interface IOPlusCameraMDM {
-    setCameraId(uint32_t cameraId, uint32_t logicalCameraId, uint32_t facing);
-    setPackageName(string packageName);
+    setCameraId(uint32_t cameraId, uint32_t logicalCameraId, uint32_t facing) generates (bool success);
+    setPackageName(string packageName) generates (bool success);
     getPackageName() generates (string packageName);
-    setJankMsg(string msg, uint32_t frameNumber, uint32_t timestamp);
+    setJankMsg(string msg, uint32_t frameNumber, uint32_t timestamp) generates (bool success);
     getJankMsg() generates (string msg);
-    file_access(string path);
-    file_delete(string path);
-    file_open(string path);
-    file_write(int32_t fd, vec<uint8_t> data, uint32_t size);
+    file_access(string path) generates (bool success);
+    file_delete(string path) generates (bool success);
+    file_open(string path) generates (int32_t fd);
+    file_write(int32_t fd, vec<uint8_t> data, uint32_t size) generates (bool success);
     file_read(int32_t fd, uint32_t size) generates (bool success, vec<uint8_t> data, uint32_t bytesRead);
-    file_close(int32_t fd);
+    file_close(int32_t fd) generates (bool success);
 };
