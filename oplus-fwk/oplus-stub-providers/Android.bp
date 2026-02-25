@@ -1,0 +1,8 @@
+android_app {
+    name: "OplusStubProviders",
+    srcs: ["src/**/*.java"],
+    manifest: "AndroidManifest.xml",
+    platform_apis: true,
+    certificate: "platform",
+    product_specific: true,
+}
