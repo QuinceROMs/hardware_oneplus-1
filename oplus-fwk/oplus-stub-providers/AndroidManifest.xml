@@ -11,9 +11,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.oplus.stub.providers">
 
-    <permission
-        android:name="oplus.permission.OPLUS_COMPONENT_SAFE"
-        android:protectionLevel="normal" />
+    <permission android:name="oplus.permission.OPLUS_COMPONENT_SAFE" android:protectionLevel="normal" />
+    <permission android:name="oppo.permission.OPPO_COMPONENT_SAFE" android:protectionLevel="normal" />
+    <permission android:name="com.oplus.permission.safe.SECURITY" android:protectionLevel="normal" />
+    <permission android:name="com.oplus.permission.safe.PRIVATE" android:protectionLevel="normal" />
+    <permission android:name="com.oplus.permission.safe.LOG" android:protectionLevel="normal" />
 
     <application
         android:label="OplusStubProviders"
