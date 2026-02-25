@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Stub providers for missing OPlus content authorities.
+    Silences "Failed to find provider info" warnings from
+    OnePlusCamera and OnePlusGallery.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.oplus.stub.providers">
+
+    <application
+        android:label="OplusStubProviders"
+        android:hasCode="true">
+
+        <provider
+            android:name="com.oplus.stub.StubContentProvider"
+            android:authorities="oneplus.gallery;com.oplus.appplatform.dispatcher;com.oplus.romupdate.provider.db;com.oplus.statistics.provider;com.oplus.customize.coreapp.configmanager.configprovider.AppFeatureProvider;com.oplus.dmp.index"
+            android:exported="true" />
+
+    </application>
+</manifest>
