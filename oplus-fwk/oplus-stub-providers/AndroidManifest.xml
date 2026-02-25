@@ -3,9 +3,17 @@
     Stub providers for missing OPlus content authorities.
     Silences "Failed to find provider info" warnings from
     OnePlusCamera and OnePlusGallery.
+
+    Also defines the oplus.permission.OPLUS_COMPONENT_SAFE
+    permission to prevent NameNotFoundException spam from
+    CameraActivity.getRequiredPermissions().
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.oplus.stub.providers">
+
+    <permission
+        android:name="oplus.permission.OPLUS_COMPONENT_SAFE"
+        android:protectionLevel="normal" />
 
     <application
         android:label="OplusStubProviders"
