@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.oplus.stub.providers">
+
+    <permission android:name="com.coloros.camera.sandbox.permission.SANDBOX_PROVIDER" android:protectionLevel="signature" />
+    <permission android:name="com.oplus.permission.safe.LOG" android:protectionLevel="normal" />
+    <permission android:name="com.oplus.permission.safe.PRIVATE" android:protectionLevel="normal" />
+    <permission android:name="com.oplus.permission.safe.SECURITY" android:protectionLevel="normal" />
+    <permission android:name="com.oplusos.camera.sandbox.permission.SANDBOX_PROVIDER" android:protectionLevel="signature" />
+    <permission android:name="oplus.permission.OPLUS_COMPONENT_SAFE" android:protectionLevel="normal" />
+    <permission android:name="oppo.permission.OPPO_COMPONENT_SAFE" android:protectionLevel="normal" />
+
+    <application
+        android:label="OplusStubProviders"
+        android:hasCode="true">
+
+        <provider
+            android:name="com.oplus.stub.StubContentProvider"
+            android:authorities="com.oplus.appplatform.dispatcher;com.oplus.customize.coreapp.configmanager.configprovider.AppFeatureProvider;com.oplus.dmp.index;com.oplus.romupdate.provider.db;com.oplus.statistics.provider;oneplus.gallery"
+            android:exported="true" />
+
+    </application>
+</manifest>
