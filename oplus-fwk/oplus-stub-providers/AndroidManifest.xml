@@ -16,6 +16,8 @@
     <permission android:name="com.oplus.permission.safe.SECURITY" android:protectionLevel="normal" />
     <permission android:name="com.oplus.permission.safe.PRIVATE" android:protectionLevel="normal" />
     <permission android:name="com.oplus.permission.safe.LOG" android:protectionLevel="normal" />
+    <permission android:name="com.coloros.camera.sandbox.permission.SANDBOX_PROVIDER" android:protectionLevel="signature" />
+    <permission android:name="com.oplusos.camera.sandbox.permission.SANDBOX_PROVIDER" android:protectionLevel="signature" />
 
     <application
         android:label="OplusStubProviders"
