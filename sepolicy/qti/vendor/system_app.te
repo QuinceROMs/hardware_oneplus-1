@@ -1,6 +1,14 @@
 # Battery Health
 r_dir_file(system_app, vendor_sysfs_usb_supply)
 
+# OnePlusCameraService (sharedUserId=android.uid.system)
+typeattribute system_app halclientdomain;
+typeattribute system_app vendor_hal_cameraMDM_client;
+allow system_app sysfs_leds:dir r_dir_perms;
+allow system_app sysfs_leds:file r_file_perms;
+allow system_app sysfs_leds:lnk_file r_file_perms;
+allow system_app sysfs_torch:file rw_file_perms;
+
 # Touchpanel
 rw_dir_file(system_app, vendor_proc_display)
 
@@ -20,7 +28,3 @@ allow system_app hal_health_default:binder call;
 allow system_app hal_power_default:binder call;
 allow system_app hal_vibrator_default:binder call;
 allow system_app hal_wifi_default:binder call;
-
-# OnePlusCameraService (sharedUserId=android.uid.system)
-typeattribute system_app halclientdomain;
-typeattribute system_app vendor_hal_cameraMDM_client;
