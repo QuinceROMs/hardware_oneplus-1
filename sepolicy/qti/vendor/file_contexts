@@ -157,7 +157,7 @@
 # Camera
 /data/vendor/camera_update(/.*)?                                                u:object_r:vendor_camera_update_data_file:s0
 /dev/camera_extension_monitor                                                   u:object_r:vendor_camera_turbo_device:s0
-/mnt/vendor/dsp/fastrpc_shell_3                                                 u:object_r:public_adsprpcd_file:s0
+/(vendor|system/vendor)/dsp/cdsp/fastrpc_shell_3                                u:object_r:same_process_hal_file:s0
 /mnt/vendor/persist/camera(/.*)?                                                u:object_r:vendor_persist_camera_file:s0
 /mnt/vendor/persist/dual_camera_calibration(/.*)?                               u:object_r:vendor_persist_camera_file:s0
 
