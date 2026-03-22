@@ -8,7 +8,6 @@ package co.aospa.dolby.xiaomi.geq.data
 
 import android.content.Context
 import android.content.SharedPreferences
-import androidx.core.content.edit
 import co.aospa.dolby.xiaomi.DolbyConstants.Companion.PREF_PRESET
 import co.aospa.dolby.xiaomi.DolbyConstants.Companion.dlog
 import co.aospa.dolby.xiaomi.DolbyController
@@ -28,13 +27,11 @@ class EqualizerRepository(
     // Current profile ID for equalizer settings
     private val profile get() = dolbyController.profile
 
-    // SharedPreferences for profile-specific settings using efficient lazy initialization
-    private val profileSharedPrefs by lazy {
+    private fun getProfileSharedPrefs(profile: Int): SharedPreferences =
         context.getSharedPreferences(
             "profile_$profile",
             Context.MODE_PRIVATE
         )
-    }
 
     // SharedPreferences for user-defined presets with lazy initialization
     private val presetsSharedPrefs by lazy {
@@ -80,7 +77,11 @@ class EqualizerRepository(
      * Retrieves current band gains from storage or controller
      */
     suspend fun getBandGains(): List<BandGain> = withContext(Dispatchers.IO) {
-        profileSharedPrefs.getString(PREF_PRESET, dolbyController.getPreset())
+        val currentProfile = profile
+        getProfileSharedPrefs(currentProfile).getString(
+            PREF_PRESET,
+            dolbyController.getPreset(currentProfile)
+        )
             ?.takeIf { it.isNotEmpty() }
             ?.let(::deserializeGains)
             ?: defaultPreset.bandGains
@@ -94,9 +95,10 @@ class EqualizerRepository(
     suspend fun setBandGains(bandGains: List<BandGain>) = withContext(Dispatchers.IO) {
         dlog(TAG, "Setting new band gains: $bandGains")
         val serialized = serializeGains(bandGains)
+        val currentProfile = profile
 
-        dolbyController.setPreset(serialized)
-        profileSharedPrefs.edit(commit = true) {
+        dolbyController.setPreset(serialized, currentProfile)
+        getProfileSharedPrefs(currentProfile).edit(commit = true) {
             putString(PREF_PRESET, serialized)
         }
     }
