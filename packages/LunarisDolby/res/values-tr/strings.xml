@@ -170,4 +170,11 @@
     <string name="batch_export">Yığın dosya dışa aktar</string>
     <string name="batch_export_description">Bütün %1$s sayıdaki düzenlenmiş ön ayarlar tek bir dosyaya aktarılacak. Devam etmek ister misin ?</string>
     <string name="export_all">Hepsini aktar</string>
+    <string name="device_state_memory_title">Cihaz başına bellek</string>
+    <string name="device_state_memory_summary">Dolby ayarlarınızı her bir ses cihazı (Kulaklık, Hoparlör, Bluetooth) için kaydeder.</string>
+    <string name="device_state_memory_conflict_toast">Uygulama profilleri devre dışı bırakıldı — Mevcut Cihaz ayarlarıyla uyumsuz</string>
+    <string name="device_state_memory_conflict_summary">⚠ Mevcut cihaz ayarları etkinken kullanılamaz.</string>
+    <string name="app_profile_conflict_toast">Cihaz bellek özelliği devre dışı — Uygulama profilleriyle ile uyumsuz.</string>
+    <string name="app_profile_conflict_summary">⚠ Uygulama profilleri etkinken kullanılamaz.</string>
+    <string name="device_state_memory_section_title">Ses Cihazları Belleği</string>
 </resources>
