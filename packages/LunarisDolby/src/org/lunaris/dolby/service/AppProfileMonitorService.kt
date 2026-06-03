@@ -16,9 +16,15 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.util.Log
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.lunaris.dolby.DolbyConstants
 import org.lunaris.dolby.R
 import org.lunaris.dolby.data.AppProfileManager
+import org.lunaris.dolby.data.DolbyDispatchers
 import org.lunaris.dolby.data.DolbyRepository
 import org.lunaris.dolby.utils.ToastHelper
 import java.util.concurrent.atomic.AtomicReference
@@ -27,6 +33,7 @@ class AppProfileMonitorService : Service() {
 
     private val handler = Handler(Looper.getMainLooper())
     private val switchHandler = Handler(Looper.getMainLooper())
+    private val halScope = CoroutineScope(SupervisorJob() + DolbyDispatchers.hal)
     private lateinit var appProfileManager: AppProfileManager
     private lateinit var dolbyRepository: DolbyRepository
     private lateinit var audioManager: AudioManager
@@ -100,7 +107,11 @@ class AppProfileMonitorService : Service() {
             
             if (hasOriginalProfile && originalProfile >= 0) {
                 DolbyConstants.dlog(TAG, "Restoring original profile: $originalProfile")
-                dolbyRepository.setCurrentProfile(originalProfile)
+                // Restore on the serial HAL worker so it runs after any in-flight app-switch
+                // and finishes before onDestroy's close(); this teardown path is infrequent.
+                runBlocking(DolbyDispatchers.hal) {
+                    dolbyRepository.setCurrentProfile(originalProfile)
+                }
                 
                 val prefs = getSharedPreferences("dolby_prefs", Context.MODE_PRIVATE)
                 val currentProfile = prefs.getString(DolbyConstants.PREF_PROFILE, "0")?.toIntOrNull() ?: 0
@@ -171,7 +182,7 @@ class AppProfileMonitorService : Service() {
                             if (assignedProfile >= 0) {
                                 DolbyConstants.dlog(TAG, "Switching to profile $assignedProfile for $packageName")
                                 lastProfileChangeTime = System.currentTimeMillis()
-                                dolbyRepository.setCurrentProfile(assignedProfile)
+                                halScope.launch { dolbyRepository.setCurrentProfile(assignedProfile) }
                                 DolbyConstants.dlog(TAG, "App profile active - original profile remains: $originalProfile")
                                 
                                 if (showToasts) {
@@ -189,7 +200,7 @@ class AppProfileMonitorService : Service() {
                                     if (currentProfile != originalProfile) {
                                         DolbyConstants.dlog(TAG, "Restoring original profile $originalProfile for $packageName (current: $currentProfile)")
                                         lastProfileChangeTime = System.currentTimeMillis()
-                                        dolbyRepository.setCurrentProfile(originalProfile)
+                                        halScope.launch { dolbyRepository.setCurrentProfile(originalProfile) }
                                     } else {
                                         DolbyConstants.dlog(TAG, "Already on original profile $originalProfile, no change needed")
                                     }
@@ -259,6 +270,7 @@ class AppProfileMonitorService : Service() {
         super.onDestroy()
         DolbyConstants.dlog(TAG, "Service destroyed")
         stopMonitoring()
+        halScope.cancel()
         dolbyRepository.close()
         hasOriginalProfile = false
     }

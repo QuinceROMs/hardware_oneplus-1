@@ -22,6 +22,10 @@ class PresetExportManager(private val context: Context) {
         private const val PRESET_FILE_VERSION = 2
         private const val FILE_EXTENSION = ".ldp"
         private const val MIME_TYPE = "application/json"
+        private const val MAX_PRESET_NAME_LENGTH = 50
+        private const val MIN_GAIN = -150
+        private const val MAX_GAIN = 150
+        private const val MAX_PRESET_IMPORT_COUNT = 200
     }
 
     suspend fun exportPresetToJson(preset: EqualizerPreset): String = withContext(Dispatchers.IO) {
@@ -52,29 +56,33 @@ class PresetExportManager(private val context: Context) {
             throw IllegalArgumentException("Preset version not supported")
         }
         val name = json.getString("name")
+        require(name.isNotBlank()) { "Preset name is empty" }
+        require(name.length <= MAX_PRESET_NAME_LENGTH) { "Preset name too long" }
         val bandMode = if (json.has("bandMode")) {
-            BandMode.fromValue(json.getString("bandMode"))
+            val bandModeValue = json.getString("bandMode")
+            require(BandMode.values().any { it.value == bandModeValue }) { "Unknown band mode: $bandModeValue" }
+            BandMode.fromValue(bandModeValue)
         } else {
             BandMode.TEN_BAND
         }
         
         val gainsArray = json.getJSONArray("bandGains")
+        require(gainsArray.length() == bandMode.bandCount) {
+            "Band count mismatch: expected ${bandMode.bandCount}, got ${gainsArray.length()}"
+        }
         val bandGains = mutableListOf<BandGain>()
         for (i in 0 until gainsArray.length()) {
             val gainObj = gainsArray.getJSONObject(i)
+            val gain = gainObj.getInt("gain")
+            require(gain in MIN_GAIN..MAX_GAIN) { "Gain out of range: $gain" }
+            val frequency = gainObj.getInt("frequency")
+            require(frequency > 0) { "Invalid frequency: $frequency" }
             bandGains.add(BandGain(
-                frequency = gainObj.getInt("frequency"),
-                gain = gainObj.getInt("gain")
+                frequency = frequency,
+                gain = gain
             ))
         }
-        
-        val expectedCount = bandMode.bandCount
-        if (bandGains.size != expectedCount) {
-            throw IllegalArgumentException(
-                "Band count mismatch: expected $expectedCount, got ${bandGains.size}"
-            )
-        }
-        
+
         EqualizerPreset(
             name = name,
             bandGains = bandGains,
@@ -150,7 +158,13 @@ class PresetExportManager(private val context: Context) {
                     }
                 } ?: throw IOException("Cannot open file")
                 val jsonObject = JSONObject(json)
+                if (jsonObject.optInt("version", 1) > PRESET_FILE_VERSION) {
+                    throw IllegalArgumentException("Preset version not supported")
+                }
                 val presetsArray = jsonObject.getJSONArray("presets")
+                require(presetsArray.length() <= MAX_PRESET_IMPORT_COUNT) {
+                    "Too many presets: ${presetsArray.length()}"
+                }
                 val presets = mutableListOf<EqualizerPreset>()
                 for (i in 0 until presetsArray.length()) {
                     val presetJson = presetsArray.getJSONObject(i).toString()
@@ -166,7 +180,8 @@ class PresetExportManager(private val context: Context) {
         withContext(Dispatchers.IO) {
             try {
                 val json = exportPresetToJson(preset)
-                val fileName = "${preset.name.replace(" ", "_")}_${preset.bandMode.value}band$FILE_EXTENSION"
+                val safeName = preset.name.replace(Regex("[^\\p{L}\\p{N}._-]"), "_").take(MAX_PRESET_NAME_LENGTH)
+                val fileName = "${safeName}_${preset.bandMode.value}band$FILE_EXTENSION"
                 val cacheDir = File(context.cacheDir, "shared_presets")
                 cacheDir.mkdirs()
                 val file = File(cacheDir, fileName)

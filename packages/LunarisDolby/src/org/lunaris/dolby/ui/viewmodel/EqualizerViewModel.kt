@@ -10,13 +10,14 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import org.lunaris.dolby.DolbyConstants
 import org.lunaris.dolby.R
+import org.lunaris.dolby.data.DolbyDispatchers
 import org.lunaris.dolby.data.DolbyRepository
 import org.lunaris.dolby.domain.models.*
 import org.lunaris.dolby.utils.ToastHelper
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.withContext
 
 class EqualizerViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -29,7 +30,6 @@ class EqualizerViewModel(application: Application) : AndroidViewModel(applicatio
     private var currentProfile = 0
     private var currentBandMode = BandMode.TEN_BAND
     private var profileChangeJob: Job? = null
-    private var isCleared = false
 
     init {
         DolbyConstants.dlog(TAG, "ViewModel initialized")
@@ -41,52 +41,49 @@ class EqualizerViewModel(application: Application) : AndroidViewModel(applicatio
         profileChangeJob?.cancel()
         profileChangeJob = viewModelScope.launch {
             repository.currentProfile.collect {
-                if (!isCleared) {
-                    DolbyConstants.dlog(TAG, "Profile changed, reloading equalizer")
-                    loadEqualizer()
-                }
+                DolbyConstants.dlog(TAG, "Profile changed, reloading equalizer")
+                loadEqualizer()
             }
         }
     }
 
     fun loadEqualizer() {
-        if (isCleared) {
-            DolbyConstants.dlog(TAG, "ViewModel cleared, skipping loadEqualizer")
-            return
-        }
-        
         viewModelScope.launch {
             try {
-                currentProfile = repository.getCurrentProfile()
-                currentBandMode = repository.getBandMode()
-                val bandGains = repository.getEqualizerGains(currentProfile, currentBandMode)
-                
-                val builtInPresets = getBuiltInPresets(currentBandMode)
-                val userPresets = repository.getUserPresets()
-                val allPresets = userPresets + builtInPresets
-                
-                val currentPresetName = repository.getPresetName(currentProfile)
-                val currentPreset = allPresets.find { it.name == currentPresetName }
-                    ?: EqualizerPreset(
-                        name = context.getString(R.string.dolby_preset_custom),
-                        bandGains = bandGains,
-                        isCustom = true,
-                        bandMode = currentBandMode
-                    )
-                
-                if (!isCleared) {
-                    _uiState.value = EqualizerUiState.Success(
-                        presets = allPresets,
-                        currentPreset = currentPreset,
-                        bandGains = bandGains,
-                        bandMode = currentBandMode
+                val (profile, bandMode, state) = withContext(DolbyDispatchers.hal) {
+                    val profile = repository.getCurrentProfile()
+                    val bandMode = repository.getBandMode()
+                    val bandGains = repository.getEqualizerGains(profile, bandMode)
+
+                    val builtInPresets = getBuiltInPresets(bandMode)
+                    val userPresets = repository.getUserPresets()
+                    val allPresets = userPresets + builtInPresets
+
+                    val currentPresetName = repository.getPresetName(profile)
+                    val currentPreset = allPresets.find { it.name == currentPresetName }
+                        ?: EqualizerPreset(
+                            name = context.getString(R.string.dolby_preset_custom),
+                            bandGains = bandGains,
+                            bandMode = bandMode
+                        )
+
+                    Triple(
+                        profile,
+                        bandMode,
+                        EqualizerUiState.Success(
+                            presets = allPresets,
+                            currentPreset = currentPreset,
+                            bandGains = bandGains,
+                            bandMode = bandMode
+                        )
                     )
                 }
+                currentProfile = profile
+                currentBandMode = bandMode
+                _uiState.value = state
             } catch (e: Exception) {
-                if (!isCleared) {
-                    DolbyConstants.dlog(TAG, "Error loading equalizer: ${e.message}")
-                    _uiState.value = EqualizerUiState.Error(e.message ?: "Unknown error")
-                }
+                DolbyConstants.dlog(TAG, "Error loading equalizer: ${e.message}")
+                _uiState.value = EqualizerUiState.Error(e.message ?: "Unknown error")
             }
         }
     }
@@ -143,7 +140,7 @@ class EqualizerViewModel(application: Application) : AndroidViewModel(applicatio
     fun setBandMode(mode: BandMode) {
         viewModelScope.launch {
             try {
-                repository.setBandMode(mode)
+                withContext(DolbyDispatchers.hal) { repository.setBandMode(mode) }
                 currentBandMode = mode
                 loadEqualizer()
             } catch (e: Exception) {
@@ -155,13 +152,17 @@ class EqualizerViewModel(application: Application) : AndroidViewModel(applicatio
     fun setPreset(preset: EqualizerPreset) {
         viewModelScope.launch {
             try {
-                val targetGains = if (preset.bandMode != currentBandMode) {
-                    convertPresetToBandMode(preset, currentBandMode)
+                val profile = currentProfile
+                val bandMode = currentBandMode
+                val targetGains = if (preset.bandMode != bandMode) {
+                    convertPresetToBandMode(preset, bandMode)
                 } else {
                     preset.bandGains
                 }
-                
-                repository.setEqualizerGains(currentProfile, targetGains, currentBandMode)
+
+                withContext(DolbyDispatchers.hal) {
+                    repository.setEqualizerGains(profile, targetGains, bandMode)
+                }
                 loadEqualizer()
             } catch (e: Exception) {
                 DolbyConstants.dlog(TAG, "Error setting preset: ${e.message}")
@@ -211,22 +212,6 @@ class EqualizerViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    fun canEditCurrentPreset(): Boolean {
-        val state = _uiState.value
-        if (state is EqualizerUiState.Success) {
-            return state.currentPreset.bandMode == currentBandMode
-        }
-        return false
-    }
-
-    fun getCurrentPresetBandMode(): BandMode? {
-        val state = _uiState.value
-        if (state is EqualizerUiState.Success) {
-            return state.currentPreset.bandMode
-        }
-        return null
-    }
-
     fun setBandGain(index: Int, gain: Int) {
         viewModelScope.launch {
             try {
@@ -243,7 +228,11 @@ class EqualizerViewModel(application: Application) : AndroidViewModel(applicatio
                     }
                     val newBandGains = state.bandGains.toMutableList()
                     newBandGains[index] = newBandGains[index].copy(gain = gain)
-                    repository.setEqualizerGains(currentProfile, newBandGains, currentBandMode)
+                    val profile = currentProfile
+                    val bandMode = currentBandMode
+                    withContext(DolbyDispatchers.hal) {
+                        repository.setEqualizerGains(profile, newBandGains, bandMode)
+                    }
                     loadEqualizer()
                 }
             } catch (e: Exception) {
@@ -264,9 +253,12 @@ class EqualizerViewModel(application: Application) : AndroidViewModel(applicatio
             return context.getString(R.string.dolby_geq_preset_name_too_long)
         }
         
+        val bandMode = currentBandMode
         viewModelScope.launch {
             try {
-                repository.addUserPreset(name.trim(), state.bandGains, currentBandMode)
+                withContext(DolbyDispatchers.hal) {
+                    repository.addUserPreset(name.trim(), state.bandGains, bandMode)
+                }
                 loadEqualizer()
             } catch (e: Exception) {
                 DolbyConstants.dlog(TAG, "Error saving preset: ${e.message}")
@@ -281,7 +273,7 @@ class EqualizerViewModel(application: Application) : AndroidViewModel(applicatio
         
         viewModelScope.launch {
             try {
-                repository.deleteUserPreset(preset.name)
+                withContext(DolbyDispatchers.hal) { repository.deleteUserPreset(preset.name) }
                 loadEqualizer()
             } catch (e: Exception) {
                 DolbyConstants.dlog(TAG, "Error deleting preset: ${e.message}")
@@ -303,11 +295,13 @@ class EqualizerViewModel(application: Application) : AndroidViewModel(applicatio
         
         viewModelScope.launch {
             try {
-                repository.addUserPreset(
-                    preset.name.trim(), 
-                    preset.bandGains, 
-                    preset.bandMode
-                )
+                withContext(DolbyDispatchers.hal) {
+                    repository.addUserPreset(
+                        preset.name.trim(),
+                        preset.bandGains,
+                        preset.bandMode
+                    )
+                }
                 loadEqualizer()
             } catch (e: Exception) {
                 DolbyConstants.dlog(TAG, "Error saving imported preset: ${e.message}")
@@ -320,8 +314,12 @@ class EqualizerViewModel(application: Application) : AndroidViewModel(applicatio
     fun resetGains() {
         viewModelScope.launch {
             try {
-                val flatPreset = getBuiltInPresets(currentBandMode).first()
-                repository.setEqualizerGains(currentProfile, flatPreset.bandGains, currentBandMode)
+                val bandMode = currentBandMode
+                val profile = currentProfile
+                withContext(DolbyDispatchers.hal) {
+                    val flatPreset = getBuiltInPresets(bandMode).first()
+                    repository.setEqualizerGains(profile, flatPreset.bandGains, bandMode)
+                }
                 loadEqualizer()
             } catch (e: Exception) {
                 DolbyConstants.dlog(TAG, "Error resetting gains: ${e.message}")
@@ -331,8 +329,6 @@ class EqualizerViewModel(application: Application) : AndroidViewModel(applicatio
     
     override fun onCleared() {
         DolbyConstants.dlog(TAG, "ViewModel onCleared")
-        isCleared = true
-        viewModelScope.coroutineContext.cancelChildren()
         profileChangeJob?.cancel()
         profileChangeJob = null
         repository.close()

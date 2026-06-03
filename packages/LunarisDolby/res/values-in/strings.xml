@@ -20,7 +20,7 @@
     <string name="dolby_on_with_profile">Aktif (%1$s)</string>
     <string name="dolby_category_settings">Penyetelan audio</string>
     <string name="dolby_category_adv_settings">Setelan lanjutan</string>
-    <string name="dolby_adv_settings_footer">Pilih profil lain untuk menampilkan setelan lanjutan.</string>
+    <string name="dolby_adv_settings_footer">Aktifkan Dolby Atmos untuk mengakses setelan lanjutan.</string>
     <string name="dolby_bass_enhancer">Peningkat bass</string>
     <string name="dolby_bass_level">Tingkat bass</string>
     <string name="dolby_bass_curve">Kurva bass</string>

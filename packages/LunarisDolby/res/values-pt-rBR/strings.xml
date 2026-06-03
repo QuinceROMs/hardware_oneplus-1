@@ -20,7 +20,7 @@
     <string name="dolby_on_with_profile">Ligado (%1$s)</string>
     <string name="dolby_category_settings">Ajuste de áudio</string>
     <string name="dolby_category_adv_settings">Configurações avançadas</string>
-    <string name="dolby_adv_settings_footer">Escolha um perfil diferente para mostrar as configurações avançadas.</string>
+    <string name="dolby_adv_settings_footer">Ative o Dolby Atmos para acessar as configurações avançadas.</string>
     <string name="dolby_bass_enhancer">Realçador de graves</string>
     <string name="dolby_bass_level">Nível de graves</string>
     <string name="dolby_bass_curve">Curva de graves</string>

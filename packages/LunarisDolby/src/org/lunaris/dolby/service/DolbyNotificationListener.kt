@@ -5,24 +5,24 @@
 
 package org.lunaris.dolby.service
 
-import android.content.Intent
 import android.service.notification.NotificationListenerService
-import android.service.notification.StatusBarNotification
 import android.util.Log
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import org.lunaris.dolby.DolbyConstants
-import org.lunaris.dolby.data.AppProfileManager
+import org.lunaris.dolby.data.DolbyDispatchers
 import org.lunaris.dolby.data.DolbyRepository
 
 class DolbyNotificationListener : NotificationListenerService() {
 
-    private lateinit var appProfileManager: AppProfileManager
     private lateinit var dolbyRepository: DolbyRepository
-    private var lastActivePackage: String? = null
+    private val halScope = CoroutineScope(SupervisorJob() + DolbyDispatchers.hal)
 
     override fun onCreate() {
         super.onCreate()
         DolbyConstants.dlog(TAG, "NotificationListener created")
-        appProfileManager = AppProfileManager(this)
         dolbyRepository = DolbyRepository(this)
         initializeDolbySettings()
         startAppProfileMonitoringIfEnabled()
@@ -41,32 +41,20 @@ class DolbyNotificationListener : NotificationListenerService() {
         requestRebind(android.content.ComponentName(this, DolbyNotificationListener::class.java))
     }
 
-    override fun onNotificationPosted(sbn: StatusBarNotification?) {
-        super.onNotificationPosted(sbn)
-        sbn?.packageName?.let { packageName ->
-            if (packageName != lastActivePackage && packageName != this.packageName) {
-                lastActivePackage = packageName
-                handlePackageChange(packageName)
-            }
-        }
-    }
-
-    override fun onNotificationRemoved(sbn: StatusBarNotification?) {
-        super.onNotificationRemoved(sbn)
-    }
-
     private fun initializeDolbySettings() {
-        try {
-            val prefs = getSharedPreferences("dolby_prefs", MODE_PRIVATE)
-            val savedProfile = prefs.getString(DolbyConstants.PREF_PROFILE, "0")?.toIntOrNull() ?: 0
-            val enabled = prefs.getBoolean(DolbyConstants.PREF_ENABLE, false)
-            DolbyConstants.dlog(TAG, "Initializing Dolby - enabled: $enabled, profile: $savedProfile")
-            if (enabled) {
-                dolbyRepository.setCurrentProfile(savedProfile)
-                dolbyRepository.setDolbyEnabled(true)
+        val prefs = getSharedPreferences("dolby_prefs", MODE_PRIVATE)
+        val savedProfile = prefs.getString(DolbyConstants.PREF_PROFILE, "0")?.toIntOrNull() ?: 0
+        val enabled = prefs.getBoolean(DolbyConstants.PREF_ENABLE, false)
+        DolbyConstants.dlog(TAG, "Initializing Dolby - enabled: $enabled, profile: $savedProfile")
+        if (enabled) {
+            halScope.launch {
+                try {
+                    dolbyRepository.setCurrentProfile(savedProfile)
+                    dolbyRepository.setDolbyEnabled(true)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to initialize Dolby settings", e)
+                }
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to initialize Dolby settings", e)
         }
     }
 
@@ -79,22 +67,10 @@ class DolbyNotificationListener : NotificationListenerService() {
         }
     }
 
-    private fun handlePackageChange(packageName: String) {
-        val prefs = getSharedPreferences("dolby_prefs", MODE_PRIVATE)
-        val isMonitoringEnabled = prefs.getBoolean("app_profile_monitoring_enabled", false)
-        if (!isMonitoringEnabled) return
-        try {
-            val assignedProfile = appProfileManager.getAppProfile(packageName)
-            if (assignedProfile >= 0) {
-                DolbyConstants.dlog(TAG, "Package change detected: $packageName -> profile $assignedProfile")
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error handling package change", e)
-        }
-    }
-
     override fun onDestroy() {
         super.onDestroy()
+        halScope.cancel()
+        dolbyRepository.close()
         DolbyConstants.dlog(TAG, "NotificationListener destroyed")
     }
 
