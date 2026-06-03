@@ -82,7 +82,7 @@ fun InteractiveFrequencyResponseCurve(
                     color = borderColor,
                     shape = MaterialTheme.shapes.large
                 )
-                .pointerInput(isEditable) {
+                .pointerInput(isEditable, bandGains.size) {
                     if (isEditable) {
                         detectDragGestures(
                             onDragStart = { offset ->

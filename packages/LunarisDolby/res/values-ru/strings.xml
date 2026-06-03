@@ -20,7 +20,7 @@
     <string name="dolby_on_with_profile">Вкл (%1$s)</string>
     <string name="dolby_category_settings">Тонкая настройка</string>
     <string name="dolby_category_adv_settings">Дополнительные настройки</string>
-    <string name="dolby_adv_settings_footer">Выберите другой профиль, чтобы открыть дополнительные настройки.</string>
+    <string name="dolby_adv_settings_footer">Включите Dolby Atmos, чтобы открыть дополнительные настройки.</string>
     <string name="dolby_bass_enhancer">Усиление басов</string>
     <string name="dolby_bass_level">Глубина басов</string>
     <string name="dolby_bass_curve">Характер басов</string>

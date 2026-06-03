@@ -82,10 +82,8 @@ fun ProfileCarousel(
             haptic.performHaptic(HapticFeedbackHelper.HapticIntensity.DOUBLE_CLICK)
             lastPage = pagerState.currentPage
             
-            if (pagerState.currentPage != initialPage) {
-                val selectedValue = profileValues[pagerState.currentPage].toInt()
-                onProfileChange(selectedValue)
-            }
+            val selectedValue = profileValues[pagerState.currentPage].toInt()
+            onProfileChange(selectedValue)
         }
     }
     

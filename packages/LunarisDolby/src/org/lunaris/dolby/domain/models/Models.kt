@@ -48,7 +48,6 @@ data class EqualizerPreset(
     val name: String,
     val bandGains: List<BandGain>,
     val isUserDefined: Boolean = false,
-    val isCustom: Boolean = false,
     val bandMode: BandMode = BandMode.TEN_BAND
 )
 

@@ -458,15 +458,16 @@ fun PresetImportExportScreen(
         )
     }
     
-    if (showDeleteDialog && presetToDelete != null) {
+    val preset = presetToDelete
+    if (showDeleteDialog && preset != null) {
         ModernConfirmDialog(
             title = "Delete Preset",
-            message = "Are you sure you want to delete '${presetToDelete!!.name}'? This will remove it from your preset list and cannot be undone.",
+            message = "Are you sure you want to delete '${preset.name}'? This will remove it from your preset list and cannot be undone.",
             icon = Icons.Default.Delete,
             onConfirm = {
                 scope.launch {
-                    viewModel.deletePreset(presetToDelete!!)
-                    ToastHelper.showToast(context, "Preset '${presetToDelete!!.name}' deleted")
+                    viewModel.deletePreset(preset)
+                    ToastHelper.showToast(context, "Preset '${preset.name}' deleted")
                     viewModel.loadEqualizer()
                     showDeleteDialog = false
                     presetToDelete = null

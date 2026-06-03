@@ -8,13 +8,11 @@ package org.lunaris.dolby.ui.screens
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -23,19 +21,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.TransformOrigin
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.layout
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
@@ -50,6 +39,8 @@ enum class EqualizerViewMode {
     SLIDERS
 }
 
+private const val EQUALIZER_FREQUENCY_RANGE = "32Hz - 19.7kHz"
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ModernEqualizerScreen(
@@ -61,10 +52,6 @@ fun ModernEqualizerScreen(
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showResetDialog by remember { mutableStateOf(false) }
     var viewMode by remember { mutableStateOf(EqualizerViewMode.CURVE) }
-    val currentRoute by navController.currentBackStackEntryFlow.collectAsState(null)
-    
-    val layoutDirection = LocalLayoutDirection.current
-    val cutoutInsets = WindowInsets.displayCutout.asPaddingValues()
 
     Scaffold(
         topBar = {
@@ -182,30 +169,11 @@ fun ModernEqualizerScreen(
                     )
             )
             
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .padding(
-                        start = cutoutInsets.calculateStartPadding(layoutDirection),
-                        end = cutoutInsets.calculateEndPadding(layoutDirection),
-                        bottom = paddingValues.calculateBottomPadding()
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                FloatingNavToolbar(
-                    currentRoute = currentRoute?.destination?.route ?: "settings",
-                    onNavigate = { route ->
-                        if (currentRoute?.destination?.route != route) {
-                            navController.navigate(route) {
-                                popUpTo("settings") { saveState = true }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        }
-                    }
-                )
-            }
+            DolbyBottomNav(
+                navController = navController,
+                contentPadding = paddingValues,
+                modifier = Modifier.align(Alignment.BottomCenter)
+            )
         }
     }
 
@@ -462,7 +430,7 @@ private fun CurveViewContent(
             }
             Text(
                 text = if (canEdit) 
-                    stringResource(R.string.interactive_frequency_response_summary) + " • ${getFrequencyRange(state.bandMode)}"
+                    stringResource(R.string.interactive_frequency_response_summary) + " • ${EQUALIZER_FREQUENCY_RANGE}"
                 else
                     stringResource(R.string.frequency_response_ro_summary),
                 style = MaterialTheme.typography.bodySmall,
@@ -520,7 +488,7 @@ private fun SlidersViewContent(
                         color = MaterialTheme.colorScheme.secondaryContainer
                     ) {
                         Text(
-                            text = getFrequencyRange(state.bandMode),
+                            text = EQUALIZER_FREQUENCY_RANGE,
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -618,15 +586,6 @@ private fun SlidersViewContent(
 }
 
 @Composable
-private fun getFrequencyRange(bandMode: BandMode): String {
-    return when (bandMode) {
-        BandMode.TEN_BAND -> "32Hz - 19.7kHz"
-        BandMode.FIFTEEN_BAND -> "32Hz - 19.7kHz"
-        BandMode.TWENTY_BAND -> "32Hz - 19.7kHz"
-    }
-}
-
-@Composable
 private fun ViewModeTile(
     title: String,
     icon: ImageVector,
@@ -703,541 +662,4 @@ private fun ViewModeTile(
             )
         }
     }
-}
-
-@Composable
-private fun BandModeSelector(
-    currentMode: BandMode,
-    onModeChange: (BandMode) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val haptic = rememberHapticFeedback()
-    val scope = rememberCoroutineScope()
-    
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.extraLarge,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceBright
-        )
-    ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(bottom = 12.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Tune,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = stringResource(R.string.band_configuration),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-            
-            Text(
-                text = stringResource(R.string.choose_equalizer_precision),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 12.dp)
-            )
-            
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                BandMode.values().forEach { mode ->
-                    BandModeTile(
-                        mode = mode,
-                        isSelected = currentMode == mode,
-                        onClick = {
-                            scope.launch {
-                                haptic.performHaptic(HapticFeedbackHelper.HapticIntensity.DOUBLE_CLICK)
-                            }
-                            onModeChange(mode)
-                        },
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun BandModeTile(
-    mode: BandMode,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val haptic = rememberHapticFeedback()
-    val scope = rememberCoroutineScope()
-    
-    Surface(
-        onClick = {
-            scope.launch {
-                haptic.performHaptic(HapticFeedbackHelper.HapticIntensity.CLICK)
-            }
-            onClick()
-        },
-        modifier = modifier
-            .height(80.dp)
-            .squishable(enabled = true, scaleDown = 0.93f),
-        color = if (isSelected)
-            MaterialTheme.colorScheme.primaryContainer
-        else
-            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-        shape = if (isSelected)
-            MaterialTheme.shapes.extraLarge
-        else
-            MaterialTheme.shapes.large,
-        border = if (isSelected)
-            BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
-        else null
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Surface(
-                modifier = Modifier.size(32.dp),
-                shape = if (isSelected)
-                    MaterialTheme.shapes.extraLarge
-                else
-                    MaterialTheme.shapes.small,
-                color = if (isSelected)
-                    MaterialTheme.colorScheme.primary
-                else
-                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        text = mode.value,
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = if (isSelected)
-                            MaterialTheme.colorScheme.onPrimary
-                        else
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(6.dp))
-            
-            Text(
-                text = mode.displayName,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                color = if (isSelected)
-                    MaterialTheme.colorScheme.onPrimaryContainer
-                else
-                    MaterialTheme.colorScheme.onSurface,
-                textAlign = TextAlign.Center
-            )
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun ModernPresetSelector(
-    presets: List<EqualizerPreset>,
-    currentPreset: EqualizerPreset,
-    onPresetSelected: (EqualizerPreset) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    var expanded by remember { mutableStateOf(false) }
-    val haptic = rememberHapticFeedback()
-    val scope = rememberCoroutineScope()
-
-    Column(modifier = modifier.padding(20.dp)) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(bottom = 12.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.LibraryMusic,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = stringResource(R.string.dolby_geq_preset),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-        }
-        
-        ExposedDropdownMenuBox(
-            expanded = expanded,
-            onExpandedChange = { 
-                scope.launch {
-                    haptic.performHaptic(HapticFeedbackHelper.HapticIntensity.TICK)
-                }
-                expanded = it 
-            }
-        ) {
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .menuAnchor(),
-                shape = MaterialTheme.shapes.large,
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        if (currentPreset.isUserDefined) {
-                            Icon(
-                                imageVector = Icons.Default.Person,
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp),
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                        }
-                        Text(
-                            text = currentPreset.name,
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-                }
-            }
-            
-            ExposedDropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false }
-            ) {
-                presets.forEach { preset ->
-                    DropdownMenuItem(
-                        text = { 
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    preset.name,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                if (preset.isUserDefined) {
-                                    Icon(
-                                        imageVector = Icons.Default.Person,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(16.dp),
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                            }
-                        },
-                        onClick = {
-                            scope.launch {
-                                haptic.performHaptic(HapticFeedbackHelper.HapticIntensity.CLICK)
-                            }
-                            onPresetSelected(preset)
-                            expanded = false
-                        }
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun ModernEqualizerBand(
-    frequency: Int,
-    gain: Int,
-    onGainChange: (Int) -> Unit,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true
-) {
-    var sliderValue by remember(gain) { mutableFloatStateOf(gain / 10f) }
-    val haptic = rememberHapticFeedback()
-    val scope = rememberCoroutineScope()
-    var lastHapticValue by remember { mutableIntStateOf((gain / 10f).toInt()) }
-
-    Column(
-        modifier = modifier
-            .width(64.dp)
-            .fillMaxHeight(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Surface(
-            shape = MaterialTheme.shapes.small,
-            color = if (enabled) MaterialTheme.colorScheme.primaryContainer
-                   else MaterialTheme.colorScheme.surfaceVariant
-        ) {
-            Text(
-                text = "%.1f".format(sliderValue),
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = if (enabled) MaterialTheme.colorScheme.onPrimaryContainer
-                       else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-            )
-        }
-        Slider(
-            value = sliderValue,
-            onValueChange = { newValue ->
-                if (enabled) {
-                    val intValue = (newValue * 10).toInt() / 10
-                    if (intValue != lastHapticValue) {
-                        scope.launch {
-                            haptic.performHaptic(HapticFeedbackHelper.HapticIntensity.TEXTURE_TICK)
-                        }
-                        lastHapticValue = intValue
-                    }
-                    sliderValue = newValue
-                }
-            },
-            onValueChangeFinished = {
-                if (enabled) {
-                    onGainChange((sliderValue * 10).toInt())
-                }
-            },
-            enabled = enabled,
-            valueRange = -15f..15f,
-            modifier = Modifier
-                .graphicsLayer {
-                    rotationZ = 270f
-                    transformOrigin = TransformOrigin(0f, 0f)
-                }
-                .layout { measurable, constraints ->
-                    val placeable = measurable.measure(
-                        Constraints(
-                            minWidth = constraints.minHeight,
-                            maxWidth = constraints.maxHeight,
-                            minHeight = constraints.minWidth,
-                            maxHeight = constraints.maxHeight,
-                        )
-                    )
-                    layout(placeable.height, placeable.width) {
-                        placeable.place(-placeable.width, 0)
-                    }
-                }
-                .weight(1f)
-                .width(48.dp),
-            colors = SliderDefaults.colors(
-                thumbColor = if (enabled) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.outline,
-                activeTrackColor = if (enabled) MaterialTheme.colorScheme.primary
-                                  else MaterialTheme.colorScheme.outline,
-                inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant,
-                disabledThumbColor = MaterialTheme.colorScheme.outline,
-                disabledActiveTrackColor = MaterialTheme.colorScheme.outline
-            )
-        )
-        Text(
-            text = if (frequency >= 1000) "${frequency / 1000}k" else "$frequency",
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Medium,
-            color = if (enabled) MaterialTheme.colorScheme.onSurface
-                   else MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-@Composable
-private fun FrequencyResponseCurve(
-    bandGains: List<BandGain>,
-    modifier: Modifier = Modifier
-) {
-    val primaryColor = MaterialTheme.colorScheme.primary
-    val surfaceColor = MaterialTheme.colorScheme.surfaceVariant
-    
-    Canvas(modifier = modifier.background(surfaceColor.copy(alpha = 0.3f))) {
-        val width = size.width
-        val height = size.height
-        val centerY = height / 2
-        
-        drawLine(
-            color = surfaceColor,
-            start = Offset(0f, centerY),
-            end = Offset(width, centerY),
-            strokeWidth = 2f
-        )
-        
-        for (i in 1..4) {
-            val y = (height / 5) * i
-            drawLine(
-                color = surfaceColor.copy(alpha = 0.3f),
-                start = Offset(0f, y),
-                end = Offset(width, y),
-                strokeWidth = 1f
-            )
-        }
-        
-        if (bandGains.isNotEmpty()) {
-            val path = Path()
-            val stepX = width / (bandGains.size - 1)
-            
-            bandGains.forEachIndexed { index, bandGain ->
-                val x = index * stepX
-                val normalizedGain = (bandGain.gain / 150f).coerceIn(-1f, 1f)
-                val y = centerY - (normalizedGain * centerY * 0.8f)
-                
-                if (index == 0) {
-                    path.moveTo(x, y)
-                } else {
-                    val prevX = (index - 1) * stepX
-                    val prevGain = bandGains[index - 1].gain
-                    val prevNormalizedGain = (prevGain / 150f).coerceIn(-1f, 1f)
-                    val prevY = centerY - (prevNormalizedGain * centerY * 0.8f)
-                    
-                    val cpX1 = prevX + stepX * 0.4f
-                    val cpY1 = prevY
-                    val cpX2 = x - stepX * 0.4f
-                    val cpY2 = y
-                    
-                    path.cubicTo(cpX1, cpY1, cpX2, cpY2, x, y)
-                }
-            }
-            
-            drawPath(
-                path = path,
-                color = primaryColor,
-                style = Stroke(width = 4f)
-            )
-            
-            val fillPath = Path().apply {
-                addPath(path)
-                lineTo(width, height)
-                lineTo(0f, height)
-                close()
-            }
-            
-            drawPath(
-                path = fillPath,
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        primaryColor.copy(alpha = 0.3f),
-                        primaryColor.copy(alpha = 0.05f)
-                    )
-                )
-            )
-        }
-    }
-}
-
-@Composable
-private fun SavePresetDialog(
-    onSave: (String) -> String?,
-    onDismiss: () -> Unit
-) {
-    var presetName by remember { mutableStateOf("") }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        icon = {
-            Icon(
-                imageVector = Icons.Default.Save,
-                contentDescription = null,
-                modifier = Modifier.size(32.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-        },
-        title = { 
-            Text(
-                stringResource(R.string.dolby_geq_new_preset),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            ) 
-        },
-        text = {
-            Column {
-                OutlinedTextField(
-                    value = presetName,
-                    onValueChange = { 
-                        presetName = it
-                        errorMessage = null
-                    },
-                    label = { 
-                        Text(
-                            stringResource(R.string.dolby_geq_preset_name),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        ) 
-                    },
-                    isError = errorMessage != null,
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.medium,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                        errorBorderColor = MaterialTheme.colorScheme.error,
-                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface
-                    )
-                )
-                if (errorMessage != null) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = errorMessage!!,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    val error = onSave(presetName)
-                    if (error != null) {
-                        errorMessage = error
-                    }
-                },
-                shape = MaterialTheme.shapes.medium,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                )
-            ) {
-                Text(stringResource(android.R.string.ok))
-            }
-        },
-        dismissButton = {
-            TextButton(
-                onClick = onDismiss,
-                shape = MaterialTheme.shapes.medium
-            ) {
-                Text(
-                    stringResource(android.R.string.cancel),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        },
-        shape = MaterialTheme.shapes.extraLarge,
-        containerColor = MaterialTheme.colorScheme.surface,
-        titleContentColor = MaterialTheme.colorScheme.onSurface,
-        textContentColor = MaterialTheme.colorScheme.onSurfaceVariant
-    )
 }
