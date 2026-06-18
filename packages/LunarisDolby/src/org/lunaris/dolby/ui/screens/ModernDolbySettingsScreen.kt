@@ -191,6 +191,10 @@ private fun ModernDolbySettingsContent(
         }
 
         item {
+            ActiveAudioDeviceCard(device = state.activeAudioDevice)
+        }
+
+        item {
             NotificationListenerPermissionCard()
         }
 
