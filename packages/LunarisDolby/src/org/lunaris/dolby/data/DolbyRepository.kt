@@ -480,12 +480,16 @@ class DolbyRepository(private val context: Context) : AutoCloseable {
     fun setSpeakerVirtualizerEnabled(profile: Int, enabled: Boolean) =
         setDapBool(DsParam.SPEAKER_VIRTUALIZER, DolbyConstants.PREF_SPK_VIRTUALIZER, profile, enabled, "speaker virtualizer")
 
-    fun getStereoWideningAmount(profile: Int): Int =
-        if (stereoWideningSupported) {
-            getDapInt(DsParam.STEREO_WIDENING_AMOUNT, profile, 32, "stereo widening")
-        } else {
-            0
+    fun getStereoWideningAmount(profile: Int): Int {
+        if (!stereoWideningSupported) return 0
+        val prefs = getProfilePrefs(profile)
+        if (prefs.contains(DolbyConstants.PREF_STEREO_WIDENING)) {
+            return prefs.getInt(DolbyConstants.PREF_STEREO_WIDENING, 32)
         }
+        val amount = getDapInt(DsParam.STEREO_WIDENING_AMOUNT, profile, 32, "stereo widening")
+        prefs.edit().putInt(DolbyConstants.PREF_STEREO_WIDENING, amount).apply()
+        return amount
+    }
 
     fun setStereoWideningAmount(profile: Int, amount: Int) {
         if (stereoWideningSupported) {
