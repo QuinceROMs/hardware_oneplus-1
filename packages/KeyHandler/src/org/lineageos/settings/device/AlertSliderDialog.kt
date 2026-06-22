@@ -16,6 +16,7 @@ import android.content.Context
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.TransitionDrawable
 import android.media.AudioManager
 import android.view.Gravity
 import android.view.Surface
@@ -167,6 +168,16 @@ class AlertSliderDialog(private var context: Context) :
                 override fun onAnimationStart(animation: Animator) {
                     isAnimating = true
                     applyOnStart(ringerMode)
+                    val transition =
+                        TransitionDrawable(
+                            arrayOf(
+                                frameView!!.background,
+                                context.resources.getDrawable(backgroundResFor(position), null),
+                            )
+                        )
+                    frameView!!.background = transition
+                    transition.setCrossFadeEnabled(true)
+                    transition.startTransition(30)
                 }
 
                 override fun onAnimationEnd(animation: Animator) {
@@ -190,24 +201,23 @@ class AlertSliderDialog(private var context: Context) :
             ?: run { textView!!.setText(R.string.alert_slider_mode_normal) }
     }
 
-    private fun applyOnEnd(endX: Int, endY: Int, position: Int) {
+    private fun backgroundResFor(position: Int): Int =
         if (isLeft) {
-            frameView!!.setBackgroundResource(
-                when (rotation) {
-                    Surface.ROTATION_90 -> sBackgroundResMapLeft90.get(position)!!
-                    Surface.ROTATION_270 -> sBackgroundResMapLeft270.get(position)!!
-                    else -> sBackgroundResMapLeft.get(position)!! // Surface.ROTATION_0
-                }
-            )
+            when (rotation) {
+                Surface.ROTATION_90 -> sBackgroundResMapLeft90.get(position)!!
+                Surface.ROTATION_270 -> sBackgroundResMapLeft270.get(position)!!
+                else -> sBackgroundResMapLeft.get(position)!! // Surface.ROTATION_0
+            }
         } else {
-            frameView!!.setBackgroundResource(
-                when (rotation) {
-                    Surface.ROTATION_90 -> sBackgroundResMap90.get(position)!!
-                    Surface.ROTATION_270 -> sBackgroundResMap270.get(position)!!
-                    else -> sBackgroundResMap.get(position)!! // Surface.ROTATION_0
-                }
-            )
+            when (rotation) {
+                Surface.ROTATION_90 -> sBackgroundResMap90.get(position)!!
+                Surface.ROTATION_270 -> sBackgroundResMap270.get(position)!!
+                else -> sBackgroundResMap.get(position)!! // Surface.ROTATION_0
+            }
         }
+
+    private fun applyOnEnd(endX: Int, endY: Int, position: Int) {
+        frameView!!.setBackgroundResource(backgroundResFor(position))
         getWindow()?.let {
             it.attributes =
                 it.attributes.apply {
