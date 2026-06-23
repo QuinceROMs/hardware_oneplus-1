@@ -9,6 +9,9 @@ import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.hardware.camera2.CameraAccessException
+import android.hardware.camera2.CameraCharacteristics
+import android.hardware.camera2.CameraManager
 import android.media.AudioManager
 import android.media.AudioSystem
 import android.os.Handler
@@ -18,6 +21,7 @@ import android.os.UserHandle
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.util.Log
 import android.view.KeyEvent
 import com.android.internal.os.DeviceKeyHandler
 import java.io.File
@@ -26,6 +30,8 @@ class KeyHandler(private val context: Context) : DeviceKeyHandler {
 
     private val audioManager = context.getSystemService(AudioManager::class.java)!!
     private val notificationManager = context.getSystemService(NotificationManager::class.java)!!
+    private val cameraManager by lazy { context.getSystemService(CameraManager::class.java)!! }
+    private var torchCameraId: String? = null
     private val vibrator: Vibrator?
 
     private val packageContext =
@@ -107,6 +113,26 @@ class KeyHandler(private val context: Context) : DeviceKeyHandler {
             return null
         }
 
+        val applied = when (keyCodeValue) {
+            KEY_VALUE_TORCH_ON, KEY_VALUE_TORCH_OFF ->
+                setTorchMode(keyCodeValue == KEY_VALUE_TORCH_ON)
+            else -> {
+                applyRingerMode(keyCodeValue)
+                // Torch positions leave the ringer alone, so only ringer modes become the previous state
+                prevKeyCode = keyCodeValue
+                true
+            }
+        }
+
+        // The dialog shows the requested mode, so skip it when the torch could not be switched
+        if (applied && sharedPreferences.getBoolean(SLIDER_DIALOG_ENABLED, true)) {
+            sendNotification(scanCode, keyCodeValue)
+        }
+
+        return null
+    }
+
+    private fun applyRingerMode(keyCodeValue: Int) {
         needsRun = false
         handler.removeCallbacksAndMessages(null)
 
@@ -156,14 +182,28 @@ class KeyHandler(private val context: Context) : DeviceKeyHandler {
                 )
             }
         }
-
-        if (sharedPreferences.getBoolean(SLIDER_DIALOG_ENABLED, true)) {
-            sendNotification(scanCode, keyCodeValue)
-        }
-
-        prevKeyCode = keyCodeValue
-        return null
     }
+
+    private fun setTorchMode(enabled: Boolean): Boolean {
+        try {
+            val cameraId = torchCameraId ?: findTorchCameraId()?.also { torchCameraId = it }
+            if (cameraId == null) {
+                Log.e(TAG, "No camera with a flash unit")
+                return false
+            }
+            cameraManager.setTorchMode(cameraId, enabled)
+            return true
+        } catch (e: CameraAccessException) {
+            Log.e(TAG, "Failed to set torch mode", e)
+            return false
+        }
+    }
+
+    private fun findTorchCameraId(): String? =
+        cameraManager.cameraIdList.firstOrNull { id ->
+            cameraManager.getCameraCharacteristics(id)
+                .get(CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
+        }
 
     private fun doHapticFeedback(effect: Int) {
         if (vibrator != null && vibrator.hasVibrator() && effect != -1) {
@@ -206,6 +246,8 @@ class KeyHandler(private val context: Context) : DeviceKeyHandler {
         const val KEY_VALUE_SILENT = 2
         const val KEY_VALUE_PRIORITY_ONLY = 3
         const val KEY_VALUE_TOTAL_SILENCE = 4
+        const val KEY_VALUE_TORCH_ON = 5
+        const val KEY_VALUE_TORCH_OFF = 6
 
         // Helper functions
         @JvmStatic

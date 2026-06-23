@@ -14,6 +14,8 @@
     <string name="alert_slider_mode_vibration">バイブ</string>
     <string name="alert_slider_mode_dnd_priority_only">重要な通知のみ</string>
     <string name="alert_slider_mode_dnd_total_silence">完全サイレント</string>
+    <string name="alert_slider_mode_torch_on">ライト ON</string>
+    <string name="alert_slider_mode_torch_off">ライト OFF</string>
     <string name="alert_slider_mute_media_title">メディアをミュート</string>
     <string name="alert_slider_mute_media_summary">サイレントモードに切り替えたときにメディア音量をミュートします</string>
 </resources>

@@ -14,6 +14,8 @@
     <string name="alert_slider_mode_vibration">Vibrație</string>
     <string name="alert_slider_mode_dnd_priority_only">Numai cu prioritate</string>
     <string name="alert_slider_mode_dnd_total_silence">Niciun sunet</string>
+    <string name="alert_slider_mode_torch_on">Lanternă pornită</string>
+    <string name="alert_slider_mode_torch_off">Lanternă oprită</string>
     <string name="alert_slider_mute_media_title">Fără sunet media</string>
     <string name="alert_slider_mute_media_summary">Fără sunet media când se schimbă la silențios</string>
 </resources>
