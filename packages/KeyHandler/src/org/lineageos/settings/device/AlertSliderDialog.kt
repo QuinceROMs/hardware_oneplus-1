@@ -299,7 +299,9 @@ class AlertSliderDialog(private var context: Context) :
                 KeyHandler.KEY_VALUE_VIBRATE to R.drawable.ic_volume_ringer_vibrate,
                 KeyHandler.KEY_VALUE_NORMAL to R.drawable.ic_volume_ringer,
                 KeyHandler.KEY_VALUE_PRIORITY_ONLY to R.drawable.ic_notifications_alert,
-                KeyHandler.KEY_VALUE_TOTAL_SILENCE to R.drawable.ic_notifications_silence
+                KeyHandler.KEY_VALUE_TOTAL_SILENCE to R.drawable.ic_notifications_silence,
+                KeyHandler.KEY_VALUE_TORCH_ON to R.drawable.ic_torch_on,
+                KeyHandler.KEY_VALUE_TORCH_OFF to R.drawable.ic_torch_off
             )
 
         private val sTextResMap =
@@ -308,7 +310,9 @@ class AlertSliderDialog(private var context: Context) :
                 KeyHandler.KEY_VALUE_VIBRATE to R.string.alert_slider_mode_vibration,
                 KeyHandler.KEY_VALUE_NORMAL to R.string.alert_slider_mode_normal,
                 KeyHandler.KEY_VALUE_PRIORITY_ONLY to R.string.alert_slider_mode_dnd_priority_only,
-                KeyHandler.KEY_VALUE_TOTAL_SILENCE to R.string.alert_slider_mode_dnd_total_silence
+                KeyHandler.KEY_VALUE_TOTAL_SILENCE to R.string.alert_slider_mode_dnd_total_silence,
+                KeyHandler.KEY_VALUE_TORCH_ON to R.string.alert_slider_mode_torch_on,
+                KeyHandler.KEY_VALUE_TORCH_OFF to R.string.alert_slider_mode_torch_off
             )
     }
 }
