@@ -54,7 +54,7 @@
     <integer name="config_wifiDelayDisconnectOnImsLostMs">2000</integer>
 
     <!-- The duration in minutes to strongly favor the last-selected network over other options. -->
-    <integer name="config_wifiFrameworkLastSelectionMinutes">0</integer>
+    <integer name="config_wifiFrameworkLastSelectionMinutes">1</integer>
 
     <!-- Integer duration after connection that a user-selected network is considered sufficient (milliseconds) -->
     <integer name="config_wifiSufficientDurationAfterUserSelectionMilliseconds">0</integer>
