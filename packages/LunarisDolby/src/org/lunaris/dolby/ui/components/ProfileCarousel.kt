@@ -79,7 +79,7 @@ fun ProfileCarousel(
     
     LaunchedEffect(pagerState.currentPage) {
         if (pagerState.currentPage != lastPage) {
-            haptic.performHaptic(HapticFeedbackHelper.HapticIntensity.DOUBLE_CLICK)
+            haptic.performHaptic(HapticFeedbackHelper.HapticIntensity.CLICK)
             lastPage = pagerState.currentPage
             
             val selectedValue = profileValues[pagerState.currentPage].toInt()
@@ -125,7 +125,7 @@ fun ProfileCarousel(
                     pageOffset = pageOffset,
                     onClick = {
                         scope.launch {
-                            haptic.performHaptic(HapticFeedbackHelper.HapticIntensity.DOUBLE_CLICK)
+                            haptic.performHaptic(HapticFeedbackHelper.HapticIntensity.CLICK)
                             pagerState.animateScrollToPage(page)
                         }
                     }
