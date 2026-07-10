@@ -48,6 +48,7 @@ fun ModernEqualizerScreen(
     navController: NavController
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var showAutoEqDialog by remember { mutableStateOf(false) }
     var showSaveDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showResetDialog by remember { mutableStateOf(false) }
@@ -81,8 +82,15 @@ fun ModernEqualizerScreen(
                     }
                     IconButton(onClick = { navController.navigate("import_export") }) {
                         Icon(
-                            Icons.Default.ImportExport, 
+                            Icons.Default.ImportExport,
                             contentDescription = "Import/Export",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    IconButton(onClick = { showAutoEqDialog = true }) {
+                        Icon(
+                            Icons.Default.Headphones,
+                            contentDescription = "AutoEQ",
                             tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
@@ -214,6 +222,13 @@ fun ModernEqualizerScreen(
                 showResetDialog = false
             },
             onDismiss = { showResetDialog = false }
+        )
+    }
+
+    if (showAutoEqDialog) {
+        AutoEqSelectionDialog(
+            viewModel = viewModel,
+            onDismiss = { showAutoEqDialog = false }
         )
     }
 }
