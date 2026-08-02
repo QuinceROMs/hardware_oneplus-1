@@ -14,6 +14,10 @@ allow priv_app vendor_hal_performance_hwservice:hwservice_manager find;
 allow priv_app adsprpcd_file:dir r_dir_perms;
 allow priv_app vendor_xdsp_device:chr_file rw_file_perms;
 
+allow priv_app_36 adsprpcd_file:dir r_dir_perms;
+allow priv_app_36 vendor_xdsp_device:chr_file rw_file_perms;
+dontaudit priv_app_36 adsprpcd_file:file read;
+
 # priv_app (coredomain) cannot access vendor_file_type files (neverallow in domain.te)
 # Scene classification DSP offloading goes through hal_camera_default instead
 dontaudit priv_app adsprpcd_file:file read;
@@ -26,3 +30,4 @@ r_dir_file(priv_app, vendor_persist_camera_file)
 allow priv_app vendor_sysfs_battery_supply:dir search;
 allow priv_app vendor_sysfs_battery_supply:file { getattr open read };
 dontaudit priv_app vendor_sysfs_kgsl:file read;
+dontaudit priv_app_36 vendor_sysfs_kgsl:file read;
