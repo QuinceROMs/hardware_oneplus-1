@@ -368,7 +368,18 @@ private fun ModernEqualizerContent(
                 }
             }
         }
-        
+
+        BandTunerCard(
+            bandGains = state.bandGains,
+            bandMode = state.bandMode,
+            onGainChange = { index, gain ->
+                if (canEdit) {
+                    viewModel.setBandGain(index, gain)
+                }
+            },
+            enabled = canEdit
+        )
+
         Spacer(modifier = Modifier.height(70.dp))
     }
 }
