@@ -6,6 +6,7 @@ ro.opcamera.support            u:object_r:vendor_camera_prop:s0
 ro.vendor.camera.res.          u:object_r:vendor_camera_prop:s0
 ro.vendor.oplus.camera.        u:object_r:vendor_camera_prop:s0
 vendor.camera.vm.parameters    u:object_r:vendor_camera_prop:s0
+vendor.camera.totalNightExp    u:object_r:vendor_camera_prop:s0 exact string
 vendor.oplus.camera.           u:object_r:vendor_camera_prop:s0
 vendor.oppo.camera.            u:object_r:vendor_camera_prop:s0
 camera.debug.superlowlight     u:object_r:vendor_camera_prop:s0
