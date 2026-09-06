@@ -35,8 +35,11 @@ DisplayModes::DisplayModes(std::shared_ptr<sdm::SDMController> controller)
       mDefaultModeId(0) {
     std::ifstream defaultFile(kDefaultPath);
 
-    defaultFile >> mDefaultModeId;
-    LOG(DEBUG) << "Default file read result " << mDefaultModeId << " fail " << defaultFile.fail();
+    int32_t modeId;
+    if (defaultFile >> modeId && kModeMap.find(modeId) != kModeMap.end()) {
+        mDefaultModeId = modeId;
+    }
+    LOG(DEBUG) << "Default display mode " << mDefaultModeId;
 
     setDisplayMode(mDefaultModeId, false);
 }
