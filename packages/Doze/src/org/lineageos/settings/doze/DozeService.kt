@@ -11,11 +11,14 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.IBinder
+import android.os.PowerManager
 import android.util.Log
 
 class DozeService : Service() {
     private lateinit var pickupSensor: PickupSensor
     private lateinit var pocketSensor: PocketSensor
+    private var pickupEnabled = false
+    private var pocketEnabled = false
 
     private val screenStateReceiver =
         object : BroadcastReceiver() {
@@ -49,6 +52,11 @@ class DozeService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (getSystemService(PowerManager::class.java)!!.isInteractive) {
+            onDisplayOn()
+        } else {
+            onDisplayOff()
+        }
         return START_STICKY
     }
 
@@ -62,21 +70,20 @@ class DozeService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    private fun onDisplayOn() {
-        if (Utils.isPickUpEnabled(this)) {
-            pickupSensor.disable()
-        }
-        if (Utils.isPocketEnabled(this)) {
-            pocketSensor.disable()
-        }
-    }
+    private fun onDisplayOn() = updateSensors(interactive = true)
 
-    private fun onDisplayOff() {
-        if (Utils.isPickUpEnabled(this)) {
-            pickupSensor.enable()
+    private fun onDisplayOff() = updateSensors(interactive = false)
+
+    private fun updateSensors(interactive: Boolean) {
+        val enablePickup = !interactive && Utils.isPickUpEnabled(this)
+        val enablePocket = !interactive && Utils.isPocketEnabled(this)
+        if (pickupEnabled != enablePickup) {
+            if (enablePickup) pickupSensor.enable() else pickupSensor.disable()
+            pickupEnabled = enablePickup
         }
-        if (Utils.isPocketEnabled(this)) {
-            pocketSensor.enable()
+        if (pocketEnabled != enablePocket) {
+            if (enablePocket) pocketSensor.enable() else pocketSensor.disable()
+            pocketEnabled = enablePocket
         }
     }
 
