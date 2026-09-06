@@ -48,7 +48,7 @@ fun BandTunerCard(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.extraLarge,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceBright
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
         )
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
@@ -122,7 +122,7 @@ fun BandTunerCard(
                 Surface(
                     shape = MaterialTheme.shapes.small,
                     color = if (enabled) MaterialTheme.colorScheme.primaryContainer
-                           else MaterialTheme.colorScheme.surfaceVariant
+                           else MaterialTheme.colorScheme.surfaceContainerHighest
                 ) {
                     Text(
                         text = formatGain(sliderValue),
@@ -159,9 +159,12 @@ fun BandTunerCard(
                 colors = SliderDefaults.colors(
                     thumbColor = MaterialTheme.colorScheme.primary,
                     activeTrackColor = MaterialTheme.colorScheme.primary,
-                    inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                    activeTickColor = MaterialTheme.colorScheme.onPrimary,
+                    inactiveTrackColor = MaterialTheme.colorScheme.secondaryContainer,
+                    inactiveTickColor = MaterialTheme.colorScheme.onSecondaryContainer,
                     disabledThumbColor = MaterialTheme.colorScheme.outline,
-                    disabledActiveTrackColor = MaterialTheme.colorScheme.outline
+                    disabledActiveTrackColor = MaterialTheme.colorScheme.outline,
+                    disabledInactiveTrackColor = MaterialTheme.colorScheme.surfaceContainerHighest
                 )
             )
 
@@ -227,16 +230,16 @@ private fun BandStepButton(
             .size(width = 64.dp, height = 40.dp)
             .squishable(enabled = enabled, scaleDown = 0.9f),
         shape = MaterialTheme.shapes.extraLarge,
-        color = if (enabled) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-               else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
+        color = if (enabled) MaterialTheme.colorScheme.secondaryContainer
+               else MaterialTheme.colorScheme.surfaceContainerHighest
     ) {
         Box(contentAlignment = Alignment.Center) {
             Icon(
                 imageVector = icon,
                 contentDescription = contentDescription,
                 modifier = Modifier.size(20.dp),
-                tint = if (enabled) MaterialTheme.colorScheme.onSurface
-                      else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                tint = if (enabled) MaterialTheme.colorScheme.onSecondaryContainer
+                      else MaterialTheme.colorScheme.outline
             )
         }
     }
@@ -264,16 +267,16 @@ private fun BandAdjustButton(
             .height(48.dp)
             .squishable(enabled = enabled, scaleDown = 0.93f),
         shape = MaterialTheme.shapes.extraLarge,
-        color = if (enabled) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-               else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
+        color = if (enabled) MaterialTheme.colorScheme.secondaryContainer
+               else MaterialTheme.colorScheme.surfaceContainerHighest
     ) {
         Box(contentAlignment = Alignment.Center) {
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Medium,
-                color = if (enabled) MaterialTheme.colorScheme.onSurface
-                       else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                color = if (enabled) MaterialTheme.colorScheme.onSecondaryContainer
+                       else MaterialTheme.colorScheme.outline
             )
         }
     }

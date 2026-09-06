@@ -41,7 +41,7 @@ fun ModernAdvancedSettingsScreen(
                     Text(
                         stringResource(R.string.dolby_category_adv_settings),
                         style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface
                     ) 
                 },
@@ -310,7 +310,8 @@ private fun ModernAdvancedSettingsContent(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.large,
-                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer
                 ) {
                     Row(
                         modifier = Modifier.padding(16.dp),
