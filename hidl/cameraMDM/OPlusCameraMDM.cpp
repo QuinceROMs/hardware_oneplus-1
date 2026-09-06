@@ -211,7 +211,19 @@ Return<bool> OPlusCameraMDM::file_write(int32_t fd, const hidl_vec<uint8_t>& dat
         LOG(ERROR) << "file_write: invalid fd " << fd;
         return false;
     }
-    write(fd, data.data(), size);
+    if (size > data.size()) {
+        LOG(ERROR) << "file_write: size exceeds input buffer";
+        return false;
+    }
+    size_t written = 0;
+    while (written < size) {
+        const ssize_t n = TEMP_FAILURE_RETRY(write(fd, data.data() + written, size - written));
+        if (n <= 0) {
+            LOG(ERROR) << "file_write: failed after " << written << " bytes";
+            return false;
+        }
+        written += n;
+    }
     return true;
 }
 
@@ -242,9 +254,9 @@ Return<bool> OPlusCameraMDM::file_close(int32_t fd) {
         LOG(ERROR) << "file_close: invalid fd " << fd;
         return false;
     }
-    close(fd);
-    LOG(DEBUG) << "file_close: close fd " << fd;
-    return true;
+    const int result = close(fd);
+    LOG(DEBUG) << "file_close: close fd " << fd << ", result = " << result;
+    return result == 0;
 }
 
 }  // namespace vendor::oplus::hardware::cameraMDM::implementation
