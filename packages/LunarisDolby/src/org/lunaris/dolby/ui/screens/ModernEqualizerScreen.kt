@@ -212,6 +212,34 @@ fun ModernEqualizerScreen(
 }
 
 @Composable
+fun EqualizerSectionHeader(
+    icon: ImageVector,
+    title: String,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(20.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = if (enabled) MaterialTheme.colorScheme.onSurface
+                   else MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
 private fun ModernEqualizerContent(
     state: EqualizerUiState.Success,
     viewModel: EqualizerViewModel,
@@ -299,24 +327,11 @@ private fun ModernEqualizerContent(
             )
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
+                EqualizerSectionHeader(
+                    icon = Icons.Default.Visibility,
+                    title = stringResource(R.string.dolby_geq_view),
                     modifier = Modifier.padding(bottom = 12.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Visibility,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = stringResource(R.string.dolby_geq_view),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
+                )
                 
                 Row(
                     modifier = Modifier.fillMaxWidth(),

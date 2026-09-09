@@ -52,25 +52,12 @@ fun BandTunerCard(
         )
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
+            EqualizerSectionHeader(
+                icon = Icons.Default.GraphicEq,
+                title = stringResource(R.string.band_tuner),
+                enabled = enabled,
                 modifier = Modifier.padding(bottom = 4.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.GraphicEq,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = stringResource(R.string.band_tuner),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = if (enabled) MaterialTheme.colorScheme.onSurface
-                           else MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            )
 
             Text(
                 text = stringResource(R.string.band_tuner_desc),

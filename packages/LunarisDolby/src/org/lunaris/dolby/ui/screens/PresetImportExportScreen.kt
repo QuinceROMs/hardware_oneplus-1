@@ -368,7 +368,7 @@ fun PresetImportExportScreen(
                             )
                         }
                         item {
-                            Spacer(Modifier.height(80.dp))
+                            Spacer(Modifier.height(70.dp))
                         }
                     }
                 }

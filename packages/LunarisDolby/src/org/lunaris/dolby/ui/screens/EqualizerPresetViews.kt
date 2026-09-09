@@ -33,24 +33,11 @@ fun ModernPresetSelector(
     val scope = rememberCoroutineScope()
 
     Column(modifier = modifier.padding(20.dp)) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
+        EqualizerSectionHeader(
+            icon = Icons.Default.LibraryMusic,
+            title = stringResource(R.string.dolby_geq_preset),
             modifier = Modifier.padding(bottom = 12.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.LibraryMusic,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = stringResource(R.string.dolby_geq_preset),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-        }
+        )
         
         ExposedDropdownMenuBox(
             expanded = expanded,
