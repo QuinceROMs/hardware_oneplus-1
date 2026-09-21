@@ -10,6 +10,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -171,7 +172,7 @@ private fun ModernAdvancedSettingsContent(
                                     viewModel.setMidLevel(0)
                                 }
                             },
-                            icon = Icons.Default.VolumeUp
+                            icon = Icons.AutoMirrored.Filled.VolumeUp
                         )
 
                         AnimatedVisibility(visible = state.profileSettings.midLevel > 0) {
@@ -225,7 +226,7 @@ private fun ModernAdvancedSettingsContent(
             item {
                 ModernSettingsCard(
                     title = stringResource(R.string.dolby_volume_leveler),
-                    icon = Icons.Default.VolumeDown
+                    icon = Icons.AutoMirrored.Filled.VolumeDown
                 ) {
                     ModernSettingSwitch(
                         title = stringResource(R.string.dolby_volume_leveler),

@@ -13,6 +13,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
@@ -117,7 +118,7 @@ fun ActiveAudioDeviceCard(
     modifier: Modifier = Modifier
 ) {
     val icon = when (device.category) {
-        AudioDeviceCategory.SPEAKER -> Icons.Default.VolumeUp
+        AudioDeviceCategory.SPEAKER -> Icons.AutoMirrored.Filled.VolumeUp
         AudioDeviceCategory.WIRED -> Icons.Default.Headphones
         AudioDeviceCategory.BLUETOOTH -> Icons.Default.Bluetooth
         AudioDeviceCategory.USB -> Icons.Default.Usb
@@ -818,7 +819,7 @@ fun ModernConfirmDialog(
                 onClick = onConfirm,
                 shape = MaterialTheme.shapes.medium
             ) {
-                Text(stringResource(android.R.string.yes))
+                Text(stringResource(R.string.yes))
             }
         },
         dismissButton = {
@@ -826,7 +827,7 @@ fun ModernConfirmDialog(
                 onClick = onDismiss,
                 shape = MaterialTheme.shapes.medium
             ) {
-                Text(stringResource(android.R.string.no))
+                Text(stringResource(R.string.no))
             }
         },
         shape = MaterialTheme.shapes.extraLarge

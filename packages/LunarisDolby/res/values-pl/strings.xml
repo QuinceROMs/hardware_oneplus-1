@@ -154,6 +154,8 @@
     <string name="notification_access_permission_details">To uprawnienie pozwala Dolby Atmos na:\n\n• Ciągłe działanie w tle\n• Automatyczne przełączanie profili dźwięku\n• Monitorowanie aplikacji na pierwszym planie\n\nTwoje powiadomienia nie będą odczytywane ani modyfikowane.</string>
     <string name="open_settings">Otwórz ustawienia</string>
     <string name="cancel">Anuluj</string>
+    <string name="yes">Tak</string>
+    <string name="no">Nie</string>
 
     <!--import export -->
     <string name="import_export_presets">Import/Eksport presetów</string>
