@@ -7,6 +7,7 @@ package org.lunaris.dolby.service
 
 import android.app.Service
 import android.app.usage.UsageEvents
+import android.app.usage.UsageEventsQuery
 import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.Intent
@@ -240,14 +241,17 @@ class AppProfileMonitorService : Service() {
         val usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
         val currentTime = System.currentTimeMillis()
         
-        val usageEvents = usageStatsManager.queryEvents(currentTime - 1000, currentTime)
+        val query = UsageEventsQuery.Builder(currentTime - 1000, currentTime)
+            .setEventTypes(UsageEvents.Event.ACTIVITY_RESUMED)
+            .build()
+        val usageEvents = usageStatsManager.queryEvents(query) ?: return null
         val event = UsageEvents.Event()
-        
+
         var lastPackage: String? = null
-        
+
         while (usageEvents.hasNextEvent()) {
             usageEvents.getNextEvent(event)
-            if (event.eventType == UsageEvents.Event.MOVE_TO_FOREGROUND) {
+            if (event.eventType == UsageEvents.Event.ACTIVITY_RESUMED) {
                 lastPackage = event.packageName
             }
         }
