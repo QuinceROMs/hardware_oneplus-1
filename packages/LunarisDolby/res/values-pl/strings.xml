@@ -181,5 +181,16 @@
     <string name="app_profile_conflict_toast">Wyłączono pamięć dla poszczególnych urządzeń — niezgodne z profilami na aplikację</string>
     <string name="app_profile_conflict_summary">⚠ Funkcja jest wyłączona, gdy aktywne są profile poszczególnych aplikacji — powodują one konflikt</string>
     <string name="device_state_memory_section_title">Pamięć urządzenia audio</string>
+
+    <!-- AutoEQ Profile -->
+    <string name="dolby_autoeq_title">Zastosuj profil AutoEQ</string>
+    <string name="dolby_autoeq_applied">Zastosowano AutoEQ dla %1$s</string>
+    <string name="dolby_autoeq_preset_name">AutoEQ: %1$s</string>
+    <string name="dolby_autoeq_search_hint">Szukaj wśród 8000+ profili...</string>
+    <string name="dolby_autoeq_currently_applied">Aktualnie zastosowany</string>
+    <string name="dolby_autoeq_clear">Wyczyść wyszukiwanie</string>
+    <string name="dolby_autoeq_search">Szukaj</string>
+    <string name="dolby_autoeq_active">Aktywny profil</string>
+    <string name="dolby_autoeq_selected">Wybrany profil</string>
 </resources>
 
