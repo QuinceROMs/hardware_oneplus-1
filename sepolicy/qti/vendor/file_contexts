@@ -204,6 +204,9 @@
 /data/vendor/dolby(/.*)?                                                               u:object_r:vendor_data_file:s0
 /vendor/bin/hw/vendor\.dolby\.hardware\.dms@2\.0-service                               u:object_r:hal_dms_default_exec:s0
 
+# Dolby Vision
+/(odm|vendor/odm)/bin/hw/dvs-aidl-service    u:object_r:hal_dolby_dvs_aidl_exec:s0
+
 # Engineering
 /mnt/vendor/persist/engineermode(/.*)?    u:object_r:vendor_persist_engineer_file:s0
 
