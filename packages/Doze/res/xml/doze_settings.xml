@@ -49,9 +49,4 @@
 
     </PreferenceCategory>
 
-    <com.android.settingslib.widget.FooterPreference
-        android:key="gesture_footer"
-        android:selectable="false"
-        android:title="@string/doze_settings_help_text" />
-
 </PreferenceScreen>
