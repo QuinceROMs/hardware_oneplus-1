@@ -27,6 +27,9 @@ vendor.pixelworks.hardware.feature::IIrisFeature    u:object_r:hal_graphics_comp
 # Dolby
 vendor.dolby.hardware.dms::IDms                     u:object_r:hal_dms_hwservice:s0
 
+# Dolby Vision
+vendor.dolby.dvs::IDvs    u:object_r:hal_dvs_hwservice:s0
+
 # Face unlock
 vendor.oplus.hardware.biometrics.face::IBiometricsFace    u:object_r:vendor_hal_face_hwservice:s0
 
