@@ -46,12 +46,21 @@ class EsimSettingsFragment : SettingsBasePreferenceFragment(), Preference.OnPref
     override fun onPreferenceChange(preference: Preference, newValue: Any?): Boolean {
         val enable = newValue as Boolean
         if (enable) {
+            val impact = controller.getEnableImpact()
+            val message =
+                when {
+                    impact == null -> getString(R.string.esim_enable_warning_unknown)
+                    impact.disablesAllPhysicalSims ->
+                        getString(R.string.esim_enable_warning_multiple)
+                    else ->
+                        getString(R.string.esim_enable_warning_single, impact.physicalSlotIndex + 1)
+                }
             AlertDialog.Builder(requireContext())
-                .setMessage(R.string.esim_toggle_dialog)
+                .setMessage(message)
                 .setNegativeButton(R.string.esim_toggle_dialog_cancel) { dialog, _ ->
                     dialog.dismiss()
                 }
-                .setPositiveButton(R.string.esim_toggle_dialog_ok) { dialog, _ ->
+                .setPositiveButton(R.string.esim_toggle_dialog_continue) { dialog, _ ->
                     dialog.dismiss()
                     toggleEsimState(true)
                 }
@@ -67,7 +76,7 @@ class EsimSettingsFragment : SettingsBasePreferenceFragment(), Preference.OnPref
         val context = requireContext().applicationContext
         controller.toggleEsimState(if (enable) 1 else 0) { success ->
             if (!success) {
-                Toast.makeText(context, R.string.esim_toggle_failed, Toast.LENGTH_LONG).show()
+                Toast.makeText(context, R.string.esim_switch_failed, Toast.LENGTH_LONG).show()
             }
         }
     }
