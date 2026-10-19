@@ -20,7 +20,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -32,6 +31,8 @@ import org.lunaris.dolby.ui.components.*
 import org.lunaris.dolby.ui.viewmodel.EqualizerViewModel
 import org.lunaris.dolby.domain.models.*
 import org.lunaris.dolby.utils.*
+import androidx.compose.foundation.ScrollState
+import androidx.compose.ui.unit.Dp
 
 enum class EqualizerViewMode {
     CURVE,
@@ -44,9 +45,13 @@ private const val EQUALIZER_FREQUENCY_RANGE = "32Hz - 19.7kHz"
 @Composable
 fun ModernEqualizerScreen(
     viewModel: EqualizerViewModel,
-    navController: NavController
+    navController: NavController,
+    bottomPadding: Dp = 0.dp,
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val scrollState = rememberScrollState()
+    val showTitle by remember { derivedStateOf { scrollState.value > 0 } }
+    var showActions by remember { mutableStateOf(false) }
     var showAutoEqDialog by remember { mutableStateOf(false) }
     var showSaveDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -55,63 +60,53 @@ fun ModernEqualizerScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { 
-                    Text(
-                        stringResource(R.string.dolby_preset),
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    ) 
-                },
+            DolbyTopAppBar(
+                title = stringResource(R.string.dolby_preset),
+                showTitle = showTitle || uiState !is EqualizerUiState.Success,
                 actions = {
                     IconButton(onClick = { showSaveDialog = true }) {
-                        Icon(
-                            Icons.Default.Save, 
-                            contentDescription = "Save",
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                    IconButton(onClick = { showResetDialog = true }) {
-                        Icon(
-                            Icons.Default.RestartAlt, 
-                            contentDescription = "Reset",
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                    IconButton(onClick = { navController.navigate("import_export") }) {
-                        Icon(
-                            Icons.Default.ImportExport,
-                            contentDescription = "Import/Export",
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
+                        Icon(Icons.Default.Save, stringResource(R.string.dolby_save_preset))
                     }
                     IconButton(onClick = { showAutoEqDialog = true }) {
-                        Icon(
-                            Icons.Default.Headphones,
-                            contentDescription = "AutoEQ",
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
+                        Icon(Icons.Default.Headphones, stringResource(R.string.dolby_autoeq_title))
                     }
-                    if (uiState is EqualizerUiState.Success) {
-                        val state = uiState as EqualizerUiState.Success
-                        if (state.currentPreset.isUserDefined) {
-                            IconButton(onClick = { showDeleteDialog = true }) {
-                                Icon(
-                                    Icons.Default.Delete, 
-                                    contentDescription = "Delete",
-                                    tint = MaterialTheme.colorScheme.error
+                    Box {
+                        IconButton(onClick = { showActions = true }) {
+                            Icon(Icons.Default.MoreVert, stringResource(R.string.dolby_more_options))
+                        }
+                        DropdownMenu(expanded = showActions, onDismissRequest = { showActions = false }) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.preset_import_export)) },
+                                leadingIcon = { Icon(Icons.Default.ImportExport, null) },
+                                onClick = {
+                                    showActions = false
+                                    navController.navigate("import_export")
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.dolby_geq_reset_gains)) },
+                                leadingIcon = { Icon(Icons.Default.RestartAlt, null) },
+                                onClick = {
+                                    showActions = false
+                                    showResetDialog = true
+                                },
+                            )
+                            if ((uiState as? EqualizerUiState.Success)?.currentPreset?.isUserDefined == true) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.dolby_geq_delete_preset)) },
+                                    leadingIcon = { Icon(Icons.Default.Delete, null) },
+                                    onClick = {
+                                        showActions = false
+                                        showDeleteDialog = true
+                                    },
                                 )
                             }
                         }
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent
-                )
             )
         },
-        containerColor = MaterialTheme.colorScheme.surfaceContainer
+        containerColor = MaterialTheme.colorScheme.surface
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize()) {
         when (val state = uiState) {
@@ -128,9 +123,11 @@ fun ModernEqualizerScreen(
             is EqualizerUiState.Success -> {
                 ModernEqualizerContent(
                     state = state,
+                    scrollState = scrollState,
                     viewModel = viewModel,
                     viewMode = viewMode,
                     onViewModeChange = { viewMode = it },
+                    bottomPadding = bottomPadding,
                     modifier = Modifier.padding(paddingValues)
                 )
             }
@@ -231,8 +228,7 @@ fun EqualizerSectionHeader(
         Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = title,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.titleMediumEmphasized,
             color = if (enabled) MaterialTheme.colorScheme.onSurface
                    else MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -242,13 +238,14 @@ fun EqualizerSectionHeader(
 @Composable
 private fun ModernEqualizerContent(
     state: EqualizerUiState.Success,
+    scrollState: ScrollState,
     viewModel: EqualizerViewModel,
     viewMode: EqualizerViewMode,
     onViewModeChange: (EqualizerViewMode) -> Unit,
+    bottomPadding: Dp,
     modifier: Modifier = Modifier
 ) {
     val isFlatPreset = state.currentPreset.name == stringResource(R.string.dolby_preset_default)
-    val scrollState = rememberScrollState()
     val isBandModeCompatible = state.currentPreset.bandMode == state.bandMode
     val canEdit = isBandModeCompatible || isFlatPreset
     val isActive = canEdit && !isFlatPreset
@@ -257,9 +254,13 @@ private fun ModernEqualizerContent(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(scrollState)
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(start = 20.dp, top = 12.dp, end = 20.dp, bottom = 12.dp + bottomPadding),
+        verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
+        DolbyPageHeading(
+            title = stringResource(R.string.dolby_preset),
+            subtitle = stringResource(R.string.dolby_equalizer_summary),
+        )
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = MaterialTheme.shapes.extraLarge,
@@ -303,8 +304,7 @@ private fun ModernEqualizerContent(
                     Column {
                         Text(
                             text = stringResource(R.string.band_mode_mismatch),
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold,
+                            style = MaterialTheme.typography.titleSmallEmphasized,
                             color = MaterialTheme.colorScheme.onErrorContainer
                         )
                         Spacer(modifier = Modifier.height(4.dp))
@@ -395,7 +395,6 @@ private fun ModernEqualizerContent(
             enabled = canEdit
         )
 
-        Spacer(modifier = Modifier.height(70.dp))
     }
 }
 
@@ -428,8 +427,7 @@ private fun CurveViewContent(
                 Text(
                     text = if (canEdit) stringResource(R.string.interactive_frequency_response)
                           else stringResource(R.string.frequency_response_ro),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.titleMediumEmphasized,
                     color = if (canEdit) MaterialTheme.colorScheme.onSurface
                           else MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -440,8 +438,7 @@ private fun CurveViewContent(
                 ) {
                     Text(
                         text = "${state.bandMode.bandCount} " + stringResource(R.string.dolby_geq_l_bands),
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.labelMediumEmphasized,
                         color = if (canEdit) MaterialTheme.colorScheme.onSecondaryContainer
                               else MaterialTheme.colorScheme.onErrorContainer,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
@@ -499,8 +496,7 @@ private fun SlidersViewContent(
                 ) {
                     Text(
                         text = stringResource(R.string.frequency_response),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.titleMediumEmphasized,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Surface(
@@ -548,8 +544,7 @@ private fun SlidersViewContent(
                     Text(
                         text = if (canEdit) stringResource(R.string.dolby_geq_slider_label_gain)
                               else "${stringResource(R.string.dolby_geq_slider_label_gain)} (${stringResource(R.string.dolby_read_only)})",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.titleMediumEmphasized,
                         color = if (canEdit) MaterialTheme.colorScheme.onSurface
                               else MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -572,8 +567,7 @@ private fun SlidersViewContent(
                                 )
                                 Text(
                                     text = stringResource(R.string.locked),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.SemiBold,
+                                    style = MaterialTheme.typography.labelSmallEmphasized,
                                     color = MaterialTheme.colorScheme.onErrorContainer
                                 )
                             }
@@ -675,8 +669,8 @@ private fun ViewModeTile(
             
             Text(
                 text = title,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
+                style = if (isSelected) MaterialTheme.typography.titleMediumEmphasized
+                    else MaterialTheme.typography.titleMedium,
                 color = if (isSelected)
                     MaterialTheme.colorScheme.onPrimaryContainer
                 else

@@ -54,8 +54,7 @@ fun ModernEqualizerBand(
         ) {
             Text(
                 text = "%.1f".format(sliderValue),
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.labelMediumEmphasized,
                 color = if (enabled) MaterialTheme.colorScheme.onPrimaryContainer
                        else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)

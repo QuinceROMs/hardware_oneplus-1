@@ -155,8 +155,7 @@ internal fun SavePresetDialog(
         title = {
             Text(
                 stringResource(R.string.dolby_geq_new_preset),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.titleLargeEmphasized,
                 color = MaterialTheme.colorScheme.onSurface
             ) 
         },
