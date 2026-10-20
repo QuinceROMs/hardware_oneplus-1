@@ -7,5 +7,7 @@ hal_client_domain(vendor_wvmkiller, hal_drm)
 
 binder_call(vendor_wvmkiller, servicemanager)
 
+dontaudit vendor_wvmkiller default_android_service:service_manager find;
+
 get_prop(vendor_wvmkiller, hwservicemanager_prop)
 set_prop(vendor_wvmkiller, vendor_wvmkiller_prop)
