@@ -215,5 +215,23 @@
     <string name="band_tuner_decrement">−0,1 dB</string>
     <string name="band_tuner_reset">0 dB</string>
     <string name="band_tuner_increment">+0,1 dB</string>
+    <string name="dolby_credits">Podziękowania</string>
+    <string name="dolby_more_options">Więcej opcji</string>
+    <string name="dolby_save_preset">Zapisz preset</string>
+    <string name="dolby_equalizer_summary">Kształtuj dźwięk, częstotliwość po częstotliwości</string>
+    <string name="dolby_advanced_summary">Dopracuj szczegóły swoich wrażeń słuchowych</string>
+    <string name="dolby_profile_dynamic_summary">Automatycznie dopasowuje się do odtwarzanego dźwięku</string>
+    <string name="interactive_frequency_response">Interaktywna charakterystyka częstotliwościowa</string>
+    <string name="interactive_frequency_response_summary">Przeciągnij punkty kontrolne, aby dostosować wzmocnienie (±15 dB)</string>
+    <string name="frequency_response_ro">Charakterystyka częstotliwościowa (tylko do odczytu)</string>
+    <string name="frequency_response_ro_summary">Widok tylko do odczytu • Niezgodność trybu pasm</string>
+    <string name="dolby_geq_view_curve">Krzywa</string>
+    <string name="dolby_geq_view_sliders">Suwaki</string>
+    <string name="dolby_geq_b_bands">Pasma</string>
+    <string name="dolby_geq_l_bands">pasm</string>
+    <string name="dolby_ieq_off_summary">Używa bieżącego profilu bez inteligentnego korektora.</string>
+    <string name="dolby_ieq_detailed_summary">Wydobywa subtelne szczegóły i klarowność.</string>
+    <string name="dolby_ieq_balanced_summary">Utrzymuje równowagę tonów niskich, średnich i wysokich.</string>
+    <string name="dolby_ieq_warm_summary">Nadaje dźwiękowi łagodniejszy, cieplejszy charakter.</string>
 </resources>
 
