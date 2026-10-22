@@ -309,8 +309,11 @@ private fun ModernEqualizerContent(
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "This ${state.currentPreset.bandMode.displayName} preset cannot be edited in ${state.bandMode.displayName} mode. " +
-                                  "Switch to ${state.currentPreset.bandMode.displayName} or select a compatible preset.",
+                            text = stringResource(
+                                R.string.band_mode_mismatch_message,
+                                state.currentPreset.bandMode.label(),
+                                state.bandMode.label()
+                            ),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onErrorContainer
                         )

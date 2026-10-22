@@ -148,6 +148,12 @@ fun ActiveAudioDeviceCard(
         AudioDeviceCategory.OTHER -> stringResource(R.string.audio_output_unknown)
     }
 
+    val name = when (device.category) {
+        AudioDeviceCategory.SPEAKER -> stringResource(R.string.audio_device_phone_speaker)
+        AudioDeviceCategory.BLUETOOTH -> device.productName ?: stringResource(R.string.audio_device_bluetooth)
+        else -> device.productName ?: categoryLabel
+    }
+
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
@@ -186,7 +192,7 @@ fun ActiveAudioDeviceCard(
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = device.name,
+                    text = name,
                     style = MaterialTheme.typography.titleMediumEmphasized,
                     color = MaterialTheme.colorScheme.onSecondaryContainer
                 )

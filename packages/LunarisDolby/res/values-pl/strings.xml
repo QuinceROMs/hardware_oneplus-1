@@ -233,5 +233,63 @@
     <string name="dolby_ieq_detailed_summary">Wydobywa subtelne szczegóły i klarowność.</string>
     <string name="dolby_ieq_balanced_summary">Utrzymuje równowagę tonów niskich, średnich i wysokich.</string>
     <string name="dolby_ieq_warm_summary">Nadaje dźwiękowi łagodniejszy, cieplejszy charakter.</string>
+    <string name="dolby_autoeq_load_failed">Nie udało się wczytać profili AutoEQ</string>
+    <string name="dolby_autoeq_download_failed">Nie udało się pobrać profilu dla %1$s</string>
+    <string name="navigate_back">Wstecz</string>
+    <string name="refresh">Odśwież</string>
+    <string name="close">Zamknij</string>
+    <plurals name="band_count">
+        <item quantity="one">%d pasmo</item>
+        <item quantity="few">%d pasma</item>
+        <item quantity="many">%d pasm</item>
+        <item quantity="other">%d pasma</item>
+    </plurals>
+    <string name="band_mode_mismatch_message">Tego presetu (%1$s) nie można edytować w trybie %2$s. Przełącz się na %1$s lub wybierz zgodny preset.</string>
+    <string name="app_profiles_reset_toast">Przywrócono profil domyślny</string>
+    <string name="app_profiles_set_toast">Ustawiono profil: %1$s</string>
+    <string name="app_profiles_removed_toast">Usunięto profil</string>
+    <string name="app_profiles_cleared_toast">Wyczyszczono wszystkie profile aplikacji</string>
+    <string name="preset_imported">Zaimportowano preset „%1$s” (%2$s)</string>
+    <string name="preset_imported_from_clipboard">Zaimportowano preset ze schowka (%1$s)</string>
+    <plurals name="preset_batch_exported">
+        <item quantity="one">Wyeksportowano %d preset</item>
+        <item quantity="few">Wyeksportowano %d presety</item>
+        <item quantity="many">Wyeksportowano %d presetów</item>
+        <item quantity="other">Wyeksportowano %d presetu</item>
+    </plurals>
+    <plurals name="preset_batch_imported">
+        <item quantity="one">Zaimportowano %1$d z %2$d presetu</item>
+        <item quantity="few">Zaimportowano %1$d z %2$d presetów</item>
+        <item quantity="many">Zaimportowano %1$d z %2$d presetów</item>
+        <item quantity="other">Zaimportowano %1$d z %2$d presetu</item>
+    </plurals>
+    <string name="preset_copied">Skopiowano preset do schowka</string>
+    <string name="preset_batch_export_failed">Eksport wsadowy nie powiódł się</string>
+    <string name="preset_batch_import_failed">Import wsadowy nie powiódł się</string>
+    <string name="preset_clipboard_import_failed">Import ze schowka nie powiódł się</string>
+    <string name="preset_copy_failed">Kopiowanie nie powiodło się</string>
+    <string name="preset_share_failed">Udostępnianie nie powiodło się</string>
+    <string name="preset_export_to_file">Eksportuj do pliku</string>
+    <string name="preset_delete_message">Czy na pewno chcesz usunąć „%1$s”? Preset zniknie z listy i nie będzie można tego cofnąć.</string>
+    <string name="preset_deleted">Usunięto preset „%1$s”</string>
+    <string name="preset_share_subject">Preset Dolby: %1$s (%2$s)</string>
+    <string name="preset_share_text">Wypróbuj ten własny preset Dolby (%1$s)!</string>
+    <string name="audio_device_phone_speaker">Głośnik telefonu</string>
+    <string name="audio_device_bluetooth">Urządzenie Bluetooth</string>
+    <string name="credits_title">Podziękowania i współtwórcy</string>
+    <string name="credits_thanks">Dziękujemy wszystkim, dzięki którym ten projekt mógł powstać!</string>
+    <string name="credits_view_on_github">Zobacz na GitHubie</string>
+    <string name="credits_main_contributors">Główni współtwórcy</string>
+    <string name="credits_translation_contributors">Tłumacze</string>
+    <string name="credits_missing_language">Brakuje twojego języka?</string>
+    <string name="credits_missing_language_summary">Pomóż ulepszyć Lunaris Dolby w swoim języku! Dodaj lub popraw tłumaczenie na GitHubie.</string>
+    <string name="credits_submit_pull_request">Wyślij pull request</string>
+    <string name="credits_other_contributors">Oraz wszyscy pozostali współtwórcy</string>
+    <string name="credits_other_contributors_summary">Pełną listę znajdziesz w repozytorium na GitHubie</string>
+    <string name="credits_contribution_ghost">Przepisanie Dolby w Compose (Lunaris Dolby)</string>
+    <string name="credits_contribution_adithya">AOSPA Dolby Manager (pierwotny kod)</string>
+    <string name="credits_contribution_kenway">Zmiany basu i wysokich tonów, strojenie korektora</string>
+    <string name="credits_contribution_tranquila">Pamięć ustawień Dolby dla każdego urządzenia</string>
+    <string name="credits_contribution_pablo">Profile korekcji słuchawek AutoEQ</string>
 </resources>
 

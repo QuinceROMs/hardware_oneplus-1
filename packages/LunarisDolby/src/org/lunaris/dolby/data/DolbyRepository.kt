@@ -30,8 +30,6 @@ class DolbyRepository(private val context: Context) : AutoCloseable {
     private val defaultPrefs = context.getSharedPreferences("dolby_prefs", Context.MODE_PRIVATE)
     private val presetsPrefs = context.getSharedPreferences(DolbyConstants.PREF_FILE_PRESETS, Context.MODE_PRIVATE)
 
-    private val deviceStateManager = DeviceStateManager(context)
-
     private val _activeAudioDevice = MutableStateFlow(resolveActiveAudioDevice())
     val activeAudioDevice: StateFlow<ActiveAudioDevice> = _activeAudioDevice.asStateFlow()
 
@@ -178,7 +176,7 @@ class DolbyRepository(private val context: Context) : AutoCloseable {
     private fun resolveActiveAudioDevice(): ActiveAudioDevice {
         val device = getCurrentOutputDevice() ?: return ActiveAudioDevice.Unknown
         return ActiveAudioDevice(
-            name = deviceStateManager.deviceDisplayName(device),
+            productName = device.productName?.toString()?.takeIf { it.isNotBlank() },
             category = device.toAudioCategory()
         )
     }

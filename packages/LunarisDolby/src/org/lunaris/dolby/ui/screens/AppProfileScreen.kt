@@ -59,7 +59,7 @@ fun AppProfileScreen(
                     IconButton(onClick = { navController.navigateUp() }) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
+                            contentDescription = stringResource(R.string.navigate_back),
                             tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
@@ -71,7 +71,7 @@ fun AppProfileScreen(
                             IconButton(onClick = { showClearAllDialog = true }) {
                                 Icon(
                                     Icons.Default.ClearAll, 
-                                    contentDescription = "Clear All",
+                                    contentDescription = stringResource(R.string.app_profiles_clear_all),
                                     tint = MaterialTheme.colorScheme.error
                                 )
                             }
@@ -80,7 +80,7 @@ fun AppProfileScreen(
                     IconButton(onClick = { viewModel.loadApps() }) {
                         Icon(
                             Icons.Default.Refresh, 
-                            contentDescription = "Refresh",
+                            contentDescription = stringResource(R.string.refresh),
                             tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
@@ -163,7 +163,7 @@ fun AppProfileScreen(
                                 IconButton(onClick = { searchQuery = "" }) {
                                     Icon(
                                         Icons.Default.Clear,
-                                        contentDescription = "Clear search",
+                                        contentDescription = stringResource(R.string.dolby_autoeq_clear),
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
@@ -258,8 +258,8 @@ fun AppProfileScreen(
 
     if (showClearAllDialog) {
         ModernConfirmDialog(
-            title = "Clear All App Profiles",
-            message = "This will remove all per-app profile assignments. Apps will use the default profile.",
+            title = stringResource(R.string.app_profiles_clear_all),
+            message = stringResource(R.string.app_profiles_clear_all_message),
             icon = Icons.Default.ClearAll,
             onConfirm = {
                 viewModel.clearAllAppProfiles()
@@ -329,12 +329,9 @@ private fun AppProfileItem(
                 )
                 Spacer(modifier = Modifier.height(2.dp))
 
-                val currentProfileName = if (app.assignedProfile >= 0) {
-                    val index = profileValues.indexOfFirst { it.toInt() == app.assignedProfile }
-                    if (index >= 0) profiles[index] else "Default"
-                } else {
-                    "Default"
-                }
+                val profileIndex = profileValues.indexOfFirst { it.toInt() == app.assignedProfile }
+                val currentProfileName = if (profileIndex >= 0) profiles[profileIndex]
+                    else stringResource(R.string.app_profiles_default)
                 
                 Text(
                     text = currentProfileName,
