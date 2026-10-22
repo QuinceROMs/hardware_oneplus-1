@@ -117,6 +117,12 @@ fun CreditsDialog(
             githubUsername = "pabloescobar-reborn",
             contributionResId = R.string.credits_contribution_pablo,
             isHighlighted = true
+        ),
+        Contributor(
+            name = "Quince",
+            githubUsername = "QuinceROMs",
+            contributionResId = R.string.credits_contribution_quince,
+            isHighlighted = true
         )
     )
     
@@ -124,7 +130,7 @@ fun CreditsDialog(
         translation("es-ES", t("sm6150-dreams")),
         translation("pt-BR", t("SMarcosS", "S-Marcos-S")),
         translation("id", t("Alhaidar Latif", "zylhdrXP")),
-        translation("pl", t("Kacper", "ziomek3120"), t("rehork")),
+        translation("pl", t("Kacper", "ziomek3120"), t("rehork"), t("Quince", "QuinceROMs")),
         translation("zh-Hant", t("DenlNister", "nnn950711")),
         translation("tr", t("Ümit Taylan", "jinetty")),
         translation("ru", t("Dmitry", "dkpost3")),
