@@ -12,7 +12,8 @@
 -->
 <resources>
     <!-- Alert Slider -->
-    <color name="alert_slider_notification_background">@android:color/system_accent2_700</color>
+    <color name="alert_slider_notification_background">@*android:color/customColorSurfaceEffect0</color>
+    <color name="alert_slider_notification_background_fallback">@android:color/system_accent2_700</color>
     <color name="slider_track_color">#FFFFFFFF</color> <!-- Gray color for the track -->
     <color name="slider_thumb_color">#FFFFFFFF</color> <!-- White color for the thumb -->
 </resources>
