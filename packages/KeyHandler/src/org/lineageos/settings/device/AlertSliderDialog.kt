@@ -16,8 +16,10 @@ import android.content.Context
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.graphics.drawable.ColorDrawable
-import android.graphics.drawable.TransitionDrawable
-import android.media.AudioManager
+import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.LayerDrawable
+import android.os.UserHandle
+import android.provider.Settings
 import android.view.Gravity
 import android.view.Surface
 import android.view.ViewGroup
@@ -29,6 +31,7 @@ import android.view.animation.OvershootInterpolator
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import com.android.internal.graphics.drawable.BackgroundBlurDrawable
 
 /** View with some logging to show that its being run. */
 class AlertSliderDialog(private var context: Context) :
@@ -44,6 +47,13 @@ class AlertSliderDialog(private var context: Context) :
     private val length: Int
     private val xPos: Int
     private val yPos: Int
+
+    private val baseBlurRadius =
+        context.resources.getDimensionPixelSize(R.dimen.alert_slider_blur_radius)
+    private val baseElevation = context.resources.getDimension(R.dimen.alert_slider_elevation)
+    private val surfaceShape = GradientDrawable().apply { shape = GradientDrawable.RECTANGLE }
+    private var blurDrawable: BackgroundBlurDrawable? = null
+    private var currPosition = KeyHandler.POSITION_MIDDLE
 
     private var isAnimating = false
     private var animator = ValueAnimator()
@@ -134,7 +144,8 @@ class AlertSliderDialog(private var context: Context) :
             animatePosition(endX, endY, position, ringerMode)
         } else {
             applyOnStart(ringerMode)
-            applyOnEnd(endX, endY, position)
+            applyBackground(position)
+            applyOnEnd(endX, endY)
         }
     }
 
@@ -168,20 +179,11 @@ class AlertSliderDialog(private var context: Context) :
                 override fun onAnimationStart(animation: Animator) {
                     isAnimating = true
                     applyOnStart(ringerMode)
-                    val transition =
-                        TransitionDrawable(
-                            arrayOf(
-                                frameView!!.background,
-                                context.resources.getDrawable(backgroundResFor(position), null),
-                            )
-                        )
-                    frameView!!.background = transition
-                    transition.setCrossFadeEnabled(true)
-                    transition.startTransition(30)
+                    applyBackground(position)
                 }
 
                 override fun onAnimationEnd(animation: Animator) {
-                    applyOnEnd(endX, endY, position)
+                    applyOnEnd(endX, endY)
                     isAnimating = false
                 }
 
@@ -216,8 +218,60 @@ class AlertSliderDialog(private var context: Context) :
             }
         }
 
-    private fun applyOnEnd(endX: Int, endY: Int, position: Int) {
-        frameView!!.setBackgroundResource(backgroundResFor(position))
+    private fun applyBackground(position: Int) {
+        currPosition = position
+        val xmlLayer = context.getDrawable(backgroundResFor(position)) as LayerDrawable
+        val xmlShape = xmlLayer.getDrawable(0) as GradientDrawable
+        val radii = xmlShape.cornerRadii
+        surfaceShape.cornerRadii = radii
+
+        val isBlurSupported =
+            context.getSystemService(WindowManager::class.java)?.isCrossWindowBlurEnabled == true
+        val blurRadiusPct =
+            Settings.Secure.getFloatForUser(
+                context.contentResolver,
+                BLUR_RADIUS_PCT,
+                100f,
+                UserHandle.USER_CURRENT
+            ).takeIf { it.isFinite() }?.coerceIn(0f, 100f) ?: 100f
+        val blurRadius = if (isBlurSupported) (baseBlurRadius * blurRadiusPct / 100f).toInt() else 0
+
+        if (blurRadius > 0) {
+            val baseColor = context.getColor(R.color.alert_slider_notification_background)
+            surfaceShape.setColor(
+                (baseColor and 0x00FFFFFF) or ((255 * BLUR_TINT_ALPHA).toInt() shl 24)
+            )
+            frameView.translationZ = 0f
+
+            val rootImpl = window?.decorView?.viewRootImpl ?: frameView.viewRootImpl
+            if (rootImpl != null) {
+                val blur =
+                    blurDrawable
+                        ?: rootImpl.createBackgroundBlurDrawable().also { blurDrawable = it }
+                if (frameView.width > 0 && frameView.height > 0) {
+                    blur.setBounds(0, 0, frameView.width, frameView.height)
+                }
+                if (radii != null) {
+                    blur.setCornerRadius(radii[0], radii[2], radii[6], radii[4])
+                }
+                blur.setBlurRadius(blurRadius)
+                if (frameView.background !is LayerDrawable) {
+                    frameView.background = LayerDrawable(arrayOf(blur, surfaceShape))
+                }
+            } else {
+                frameView.background = surfaceShape
+            }
+        } else {
+            blurDrawable?.setBlurRadius(0)
+            surfaceShape.setColor(
+                context.getColor(R.color.alert_slider_notification_background_fallback)
+            )
+            frameView.translationZ = baseElevation
+            frameView.background = surfaceShape
+        }
+    }
+
+    private fun applyOnEnd(endX: Int, endY: Int) {
         getWindow()?.let {
             it.attributes =
                 it.attributes.apply {
@@ -227,7 +281,20 @@ class AlertSliderDialog(private var context: Context) :
         }
     }
 
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        applyBackground(currPosition)
+    }
+
+    override fun onDetachedFromWindow() {
+        blurDrawable?.setBlurRadius(0)
+        blurDrawable = null
+        frameView.background = surfaceShape
+        super.onDetachedFromWindow()
+    }
+
     override fun show() {
+        dialogView.animate().cancel()
         dialogView.alpha = 0f
         super.show()
         dialogView
@@ -239,6 +306,7 @@ class AlertSliderDialog(private var context: Context) :
     }
 
     override fun dismiss() {
+        dialogView.animate().cancel()
         dialogView
             .animate()
             .alpha(0f)
@@ -250,6 +318,9 @@ class AlertSliderDialog(private var context: Context) :
 
     companion object {
         private const val TAG = "AlertSliderDialog"
+        private const val BLUR_TINT_ALPHA = 0.58f
+        // Blur intensity in percent, set by Settings' BlurSettings, read by SystemUI's BlurConfig.
+        private const val BLUR_RADIUS_PCT = "system_blur_radius_pct"
 
         private val sBackgroundResMap =
             hashMapOf(
