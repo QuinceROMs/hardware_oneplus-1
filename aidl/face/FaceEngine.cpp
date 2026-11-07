@@ -15,6 +15,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <cstring>
 #include <string>
 
@@ -26,6 +27,8 @@ namespace {
 
 constexpr const char* kCmdline = "com.oneplus.faceunlock";
 constexpr const char* kResources = "/vendor/etc/faceunlock/resources.zip";
+// SNPE looks for libOpenCL.so in LD_LIBRARY_PATH before the system paths, see OpenCLShim.c.
+constexpr const char* kOpenCLShimDir = "/vendor/lib64/faceunlock";
 
 // In dependency order, so DT_NEEDED entries resolve to the already loaded libraries.
 constexpr const char* kLibraries[] = {
@@ -141,6 +144,8 @@ FaceEngine::~FaceEngine() {
 }
 
 bool FaceEngine::loadSymbols() {
+    // The linker read LD_LIBRARY_PATH at startup, so this only redirects SNPE's own lookup.
+    setenv("LD_LIBRARY_PATH", kOpenCLShimDir, 1);
     for (const char* name : kLibraries) {
         std::string path = std::string(kResources) + "!/lib/arm64-v8a/" + name;
         void* lib = dlopen(path.c_str(), RTLD_NOW);

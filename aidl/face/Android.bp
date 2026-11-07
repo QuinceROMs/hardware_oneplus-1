@@ -41,4 +41,38 @@ cc_binary {
         "android.hardware.biometrics.common.thread",
         "android.hardware.biometrics.common.util",
     ],
+    required: [
+        "libopencl.face-service.oneplus",
+        "libopencl.face-service.oneplus-link",
+    ],
+}
+
+cc_library_shared {
+    name: "libopencl.face-service.oneplus",
+    vendor: true,
+    relative_install_path: "faceunlock",
+    compile_multilib: "64",
+    srcs: ["OpenCLShim.c"],
+    header_libs: ["OpenCL-Headers"],
+    shared_libs: [
+        "libdl",
+        "liblog",
+        "libopencl.face-service.oneplus-stub",
+    ],
+}
+
+// Only provides the libOpenCL.so dependency at link time, the vendor library resolves it.
+cc_library_shared {
+    name: "libopencl.face-service.oneplus-stub",
+    stem: "libOpenCL",
+    vendor: true,
+    compile_multilib: "64",
+    installable: false,
+}
+
+install_symlink {
+    name: "libopencl.face-service.oneplus-link",
+    vendor: true,
+    installed_location: "lib64/faceunlock/libOpenCL.so",
+    symlink_target: "libopencl.face-service.oneplus.so",
 }
