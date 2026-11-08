@@ -9,12 +9,15 @@
 
 #include <android-base/file.h>
 #include <android-base/logging.h>
+#include <android-base/parseint.h>
 #include <android-base/properties.h>
 #include <android-base/strings.h>
 #include <android/native_window_aidl.h>
 #include <util/CancellationSignal.h>
 
+#include <cstdio>
 #include <random>
+#include <unistd.h>
 
 namespace aidl::android::hardware::biometrics::face {
 
@@ -33,6 +36,19 @@ bool useTee() {
     return ::android::base::GetBoolProperty("persist.vendor.faceunlock.tee", true);
 }
 
+bool writeAtomically(const char* path, const std::string& content) {
+    const std::string temporary = std::string(path) + ".tmp";
+    if (!::android::base::WriteStringToFile(content, temporary)) {
+        unlink(temporary.c_str());
+        return false;
+    }
+    if (rename(temporary.c_str(), path) != 0) {
+        unlink(temporary.c_str());
+        return false;
+    }
+    return true;
+}
+
 constexpr auto kAuthTimeout = 5s;
 constexpr auto kEnrollTimeout = 60s;
 constexpr auto kLargeDetectorDelay = 500ms;
@@ -47,6 +63,8 @@ constexpr auto kLockoutDuration = 30s;
 
 int64_t randomId() {
     static std::mt19937_64 rng(std::random_device{}());
+    static std::mutex rngLock;
+    std::lock_guard lock(rngLock);
     std::uniform_int_distribution<int64_t> dist(1, INT64_MAX);
     return dist(rng);
 }
@@ -102,10 +120,13 @@ Enrollment Enrollment::load() {
     if (!::android::base::ReadFileToString(kEnrollmentFile, &content)) return e;
 
     auto fields = ::android::base::Split(::android::base::Trim(content), " ");
-    if (fields.size() != 4 && fields.size() != 5) return e;
-    e.userId = std::stoi(fields[0]);
-    e.enrollmentId = std::stoi(fields[1]);
-    e.authenticatorId = std::stoll(fields[2]);
+    if (fields.size() != 4 && fields.size() != 5) return {};
+    if (!::android::base::ParseInt(fields[0], &e.userId) ||
+        !::android::base::ParseInt(fields[1], &e.enrollmentId) ||
+        !::android::base::ParseInt(fields[2], &e.authenticatorId)) {
+        return {};
+    }
+    if (fields[3] != "0" && fields[3] != "1") return {};
     e.requireAttention = fields[3] == "1";
     e.engine = fields.size() == 5 ? fields[4] : kCvEngine;
     return e;
@@ -116,7 +137,7 @@ bool Enrollment::save() const {
     std::string content = std::to_string(userId) + " " + std::to_string(enrollmentId) + " " +
                           std::to_string(authenticatorId) + " " + (requireAttention ? "1" : "0") +
                           " " + engine;
-    return ::android::base::WriteStringToFile(content, kEnrollmentFile);
+    return writeAtomically(kEnrollmentFile, content);
 }
 
 Session::Session(std::shared_ptr<Hardware> hw, int32_t userId, std::shared_ptr<ISessionCallback> cb)
@@ -152,11 +173,9 @@ bool Session::prepare() {
     return true;
 }
 
-bool Session::storeFeature(const std::vector<uint8_t>& feature, const std::vector<uint8_t>& nv21) {
-    removeFeature();
+bool Session::storeFeature(const std::vector<uint8_t>& feature) {
     if (!useTee()) {
-        if (!::android::base::WriteStringToFile(std::string(feature.begin(), feature.end()),
-                                                kFeatureFile)) {
+        if (!writeAtomically(kFeatureFile, std::string(feature.begin(), feature.end()))) {
             PLOG(ERROR) << "Failed to write feature";
             return false;
         }
@@ -168,8 +187,6 @@ bool Session::storeFeature(const std::vector<uint8_t>& feature, const std::vecto
         LOG(ERROR) << "Failed to save feature of " << feature.size() << " bytes";
         return false;
     }
-    // Kept so the feature can be regenerated if the algorithm ever changes.
-    tee.saveFrame(0, nv21.data());
     return true;
 }
 
@@ -332,7 +349,7 @@ void Session::doEnroll(const keymaster::HardwareAuthToken& hat, ANativeWindow* p
         return;
     }
 
-    if (!storeFeature(feature, nv21)) {
+    if (!storeFeature(feature)) {
         mCb->onError(Error::UNABLE_TO_PROCESS, 0);
         return;
     }
@@ -636,7 +653,11 @@ ndk::ScopedAStatus Session::removeEnrollments(const std::vector<int32_t>& enroll
             mCb->onError(Error::UNABLE_TO_REMOVE, 0);
             return;
         }
-        Enrollment().save();
+        if (!Enrollment().save()) {
+            PLOG(ERROR) << "Failed to remove enrollment";
+            mCb->onError(Error::UNABLE_TO_REMOVE, 0);
+            return;
+        }
         mCb->onEnrollmentsRemoved(enrollmentIds);
     });
     return ndk::ScopedAStatus::ok();
@@ -675,25 +696,12 @@ ndk::ScopedAStatus Session::setFeature(const keymaster::HardwareAuthToken&, Feat
 }
 
 ndk::ScopedAStatus Session::getAuthenticatorId() {
-    schedule([this](const std::future<void>&) {
-        Enrollment enrollment = Enrollment::load();
-        mCb->onAuthenticatorIdRetrieved(enrollment.userId == mUserId ? enrollment.authenticatorId
-                                                                     : 0);
-    });
+    schedule([this](const std::future<void>&) { mCb->onAuthenticatorIdRetrieved(0); });
     return ndk::ScopedAStatus::ok();
 }
 
 ndk::ScopedAStatus Session::invalidateAuthenticatorId() {
-    schedule([this](const std::future<void>&) {
-        Enrollment enrollment = Enrollment::load();
-        if (enrollment.userId != mUserId) {
-            mCb->onAuthenticatorIdInvalidated(0);
-            return;
-        }
-        enrollment.authenticatorId = randomId();
-        enrollment.save();
-        mCb->onAuthenticatorIdInvalidated(enrollment.authenticatorId);
-    });
+    schedule([this](const std::future<void>&) { mCb->onAuthenticatorIdInvalidated(0); });
     return ndk::ScopedAStatus::ok();
 }
 

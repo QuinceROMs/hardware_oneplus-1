@@ -307,10 +307,11 @@ bool FaceEngine::detect(const Frame& frame, int orientation, bool large, bool tr
 FaceEngine::Quality FaceEngine::checkQuality(const Frame& frame, DetectedFace& face) {
     cv_face_t f = face.get();
     float scores[std::size(kQualityFilters)] = {};
-    int unused = 0;
+    int qualityResult = 0;
     // The stock app also passes NV21 frames as NV12 here, only luma is inspected.
     if (qualityDetect(kQualityFilters, std::size(kQualityFilters), frame.nv21, CV_PIX_FMT_NV12,
-                      frame.width, frame.height, frame.width, &f, scores, &unused) != 0) {
+                      frame.width, frame.height, frame.width, &f, scores, &qualityResult) != 0 ||
+        qualityResult == 0) {
         return Quality::INSUFFICIENT;
     }
 
