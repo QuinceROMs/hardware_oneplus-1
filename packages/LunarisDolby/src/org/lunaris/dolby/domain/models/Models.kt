@@ -5,10 +5,13 @@
 
 package org.lunaris.dolby.domain.models
 
-enum class BandMode(val value: String, val displayName: String, val bandCount: Int) {
-    TEN_BAND("10", "10 Bands", 10),
-    FIFTEEN_BAND("15", "15 Bands", 15),
-    TWENTY_BAND("20", "20 Bands", 20);
+import android.content.Context
+import org.lunaris.dolby.R
+
+enum class BandMode(val value: String, val bandCount: Int) {
+    TEN_BAND("10", 10),
+    FIFTEEN_BAND("15", 15),
+    TWENTY_BAND("20", 20);
     
     companion object {
         fun fromValue(value: String): BandMode {
@@ -16,6 +19,9 @@ enum class BandMode(val value: String, val displayName: String, val bandCount: I
         }
     }
 }
+
+fun BandMode.label(context: Context): String =
+    context.resources.getQuantityString(R.plurals.band_count, bandCount, bandCount)
 
 data class DolbyProfile(
     val id: Int,
@@ -65,14 +71,14 @@ enum class AudioDeviceCategory {
 }
 
 data class ActiveAudioDevice(
-    val name: String,
+    val productName: String?,
     val category: AudioDeviceCategory
 ) {
     val isOnSpeaker: Boolean
         get() = category == AudioDeviceCategory.SPEAKER
 
     companion object {
-        val Unknown = ActiveAudioDevice("Unknown", AudioDeviceCategory.OTHER)
+        val Unknown = ActiveAudioDevice(null, AudioDeviceCategory.OTHER)
     }
 }
 

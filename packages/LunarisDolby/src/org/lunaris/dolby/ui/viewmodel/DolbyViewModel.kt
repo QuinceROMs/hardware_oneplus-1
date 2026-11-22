@@ -40,7 +40,7 @@ class DolbyViewModel(application: Application) : AndroidViewModel(application) {
         audioOutputStateJob?.cancel()
         audioOutputStateJob = viewModelScope.launch {
             repository.activeAudioDevice.collect {
-                DolbyConstants.dlog(TAG, "Audio output changed: ${it.name} (${it.category})")
+                DolbyConstants.dlog(TAG, "Audio output changed: ${it.productName} (${it.category})")
                 loadSettings()
             }
         }

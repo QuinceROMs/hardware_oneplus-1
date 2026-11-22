@@ -12,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -20,6 +21,10 @@ import org.lunaris.dolby.R
 import org.lunaris.dolby.ui.components.*
 import org.lunaris.dolby.domain.models.*
 import org.lunaris.dolby.utils.*
+
+@Composable
+internal fun BandMode.label(): String =
+    pluralStringResource(R.plurals.band_count, bandCount, bandCount)
 
 @Composable
 internal fun BandModeSelector(
@@ -140,7 +145,7 @@ private fun BandModeTile(
             Spacer(modifier = Modifier.height(6.dp))
             
             Text(
-                text = mode.displayName,
+                text = mode.label(),
                 style = if (isSelected) MaterialTheme.typography.labelSmallEmphasized
                     else MaterialTheme.typography.labelSmall,
                 color = if (isSelected)

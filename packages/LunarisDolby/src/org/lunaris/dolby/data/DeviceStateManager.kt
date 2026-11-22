@@ -34,23 +34,6 @@ class DeviceStateManager(private val context: Context) {
         }
     }
 
-    fun deviceDisplayName(device: AudioDeviceInfo): String {
-        val productName = device.productName?.toString()?.takeIf { it.isNotBlank() }
-        return when (device.type) {
-            AudioDeviceInfo.TYPE_BUILTIN_SPEAKER -> "Phone Speaker"
-            AudioDeviceInfo.TYPE_WIRED_HEADPHONES,
-            AudioDeviceInfo.TYPE_WIRED_HEADSET -> productName ?: "Wired Headphones"
-            AudioDeviceInfo.TYPE_USB_HEADSET,
-            AudioDeviceInfo.TYPE_USB_DEVICE -> productName ?: "USB Audio"
-            AudioDeviceInfo.TYPE_BLUETOOTH_A2DP,
-            AudioDeviceInfo.TYPE_BLUETOOTH_SCO,
-            AudioDeviceInfo.TYPE_BLE_HEADSET,
-            AudioDeviceInfo.TYPE_BLE_SPEAKER,
-            AudioDeviceInfo.TYPE_BLE_BROADCAST -> productName ?: "Bluetooth Device"
-            else -> productName ?: "Audio Device"
-        }
-    }
-
     fun saveSnapshot(deviceKey: String, repository: DolbyRepository) {
         val profile = repository.getCurrentProfile()
         val prefs = getDevicePrefs(deviceKey)

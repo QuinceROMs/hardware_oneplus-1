@@ -11,9 +11,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
+import org.lunaris.dolby.R
 import org.lunaris.dolby.domain.models.BandGain
 import org.lunaris.dolby.domain.models.BandMode
 import org.lunaris.dolby.domain.models.EqualizerPreset
+import org.lunaris.dolby.domain.models.label
 import java.io.*
 
 class PresetExportManager(private val context: Context) {
@@ -199,17 +201,19 @@ class PresetExportManager(private val context: Context) {
                 val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                     type = MIME_TYPE
                     putExtra(android.content.Intent.EXTRA_STREAM, uri)
-                    putExtra(android.content.Intent.EXTRA_SUBJECT, 
-                        "Dolby Preset: ${preset.name} (${preset.bandMode.displayName})")
-                    putExtra(android.content.Intent.EXTRA_TEXT, 
-                        "Check out this custom Dolby ${preset.bandMode.displayName} audio preset!")
+                    putExtra(android.content.Intent.EXTRA_SUBJECT, shareTitle(preset))
+                    putExtra(android.content.Intent.EXTRA_TEXT,
+                        context.getString(R.string.preset_share_text, preset.bandMode.label(context)))
                     addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 }
-                Result.success(android.content.Intent.createChooser(intent, "Share Preset"))
+                Result.success(android.content.Intent.createChooser(intent, context.getString(R.string.preset_share)))
             } catch (e: Exception) {
                 Result.failure(e)
             }
         }
+
+    private fun shareTitle(preset: EqualizerPreset) =
+        context.getString(R.string.preset_share_subject, preset.name, preset.bandMode.label(context))
 
     suspend fun copyPresetToClipboard(preset: EqualizerPreset): Result<Unit> = 
         withContext(Dispatchers.IO) {
@@ -217,10 +221,7 @@ class PresetExportManager(private val context: Context) {
                 val json = exportPresetToJson(preset)
                 val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) 
                     as android.content.ClipboardManager
-                val clip = android.content.ClipData.newPlainText(
-                    "Dolby Preset: ${preset.name} (${preset.bandMode.displayName})", 
-                    json
-                )
+                val clip = android.content.ClipData.newPlainText(shareTitle(preset), json)
                 clipboard.setPrimaryClip(clip)
                 Result.success(Unit)
             } catch (e: Exception) {

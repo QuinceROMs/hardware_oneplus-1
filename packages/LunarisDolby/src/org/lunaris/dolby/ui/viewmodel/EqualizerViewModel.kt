@@ -142,7 +142,7 @@ class EqualizerViewModel(application: Application) : AndroidViewModel(applicatio
                 _autoEqReady.value = true
             } catch (e: Exception) {
                 DolbyConstants.dlog(TAG, "Error initializing AutoEQ: ${e.message}")
-                ToastHelper.showToast(ctx, "Failed to load AutoEQ profiles")
+                ToastHelper.showToast(ctx, ctx.getString(R.string.dolby_autoeq_load_failed))
             } finally {
                 _isSearchLoading.value = false
             }
@@ -165,11 +165,11 @@ class EqualizerViewModel(application: Application) : AndroidViewModel(applicatio
 
                     applyAutoEqProfile(profile.name, profile.graphicEq)
                 } else {
-                    ToastHelper.showToast(ctx, "Failed to download profile for ${entry.name}")
+                    ToastHelper.showToast(ctx, ctx.getString(R.string.dolby_autoeq_download_failed, entry.name))
                 }
             } catch (e: Exception) {
                 DolbyConstants.dlog(TAG, "Error downloading AutoEQ profile: ${e.message}")
-                ToastHelper.showToast(ctx, "Failed to download profile for ${entry.name}")
+                ToastHelper.showToast(ctx, ctx.getString(R.string.dolby_autoeq_download_failed, entry.name))
             } finally {
                 _isSearchLoading.value = false
             }
@@ -387,8 +387,11 @@ class EqualizerViewModel(application: Application) : AndroidViewModel(applicatio
                     if (!isFlatPreset && state.currentPreset.bandMode != currentBandMode) {
                         ToastHelper.showToast(
                             context,
-                            "Cannot edit ${state.currentPreset.bandMode.displayName} preset in ${currentBandMode.displayName} mode. " +
-                            "Switch to ${state.currentPreset.bandMode.displayName} or select a different preset."
+                            context.getString(
+                                R.string.band_mode_mismatch_message,
+                                state.currentPreset.bandMode.label(context),
+                                currentBandMode.label(context)
+                            )
                         )
                         return@launch
                     }

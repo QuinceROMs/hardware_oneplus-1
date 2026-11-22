@@ -233,4 +233,68 @@
     <string name="dolby_autoeq_search">Search</string>
     <string name="dolby_autoeq_active">Active profile</string>
     <string name="dolby_autoeq_selected">Selected profile</string>
+    <string name="dolby_autoeq_load_failed">Failed to load AutoEQ profiles</string>
+    <string name="dolby_autoeq_download_failed">Failed to download profile for %1$s</string>
+
+    <!-- Common actions -->
+    <string name="navigate_back">Back</string>
+    <string name="refresh">Refresh</string>
+    <string name="close">Close</string>
+
+    <!-- Band modes -->
+    <plurals name="band_count">
+        <item quantity="one">%d Band</item>
+        <item quantity="other">%d Bands</item>
+    </plurals>
+    <string name="band_mode_mismatch_message">This %1$s preset cannot be edited in %2$s mode. Switch to %1$s or select a compatible preset.</string>
+
+    <!-- Per-app profile toasts -->
+    <string name="app_profiles_reset_toast">Profile reset to default</string>
+    <string name="app_profiles_set_toast">Profile set to: %1$s</string>
+    <string name="app_profiles_removed_toast">Profile removed</string>
+    <string name="app_profiles_cleared_toast">All app profiles cleared</string>
+
+    <!-- Preset import/export results -->
+    <string name="preset_imported">Preset \'%1$s\' imported! (%2$s)</string>
+    <string name="preset_imported_from_clipboard">Preset imported from clipboard! (%1$s)</string>
+    <plurals name="preset_batch_exported">
+        <item quantity="one">%d preset exported!</item>
+        <item quantity="other">%d presets exported!</item>
+    </plurals>
+    <plurals name="preset_batch_imported">
+        <item quantity="one">Imported %1$d of %2$d preset</item>
+        <item quantity="other">Imported %1$d of %2$d presets</item>
+    </plurals>
+    <string name="preset_copied">Preset copied to clipboard!</string>
+    <string name="preset_batch_export_failed">Batch export failed</string>
+    <string name="preset_batch_import_failed">Batch import failed</string>
+    <string name="preset_clipboard_import_failed">Clipboard import failed</string>
+    <string name="preset_copy_failed">Copy failed</string>
+    <string name="preset_share_failed">Share failed</string>
+    <string name="preset_export_to_file">Export to file</string>
+    <string name="preset_delete_message">Are you sure you want to delete \'%1$s\'? This will remove it from your preset list and cannot be undone.</string>
+    <string name="preset_deleted">Preset \'%1$s\' deleted</string>
+    <string name="preset_share_subject">Dolby Preset: %1$s (%2$s)</string>
+    <string name="preset_share_text">Check out this custom Dolby %1$s audio preset!</string>
+
+    <!-- Audio device names -->
+    <string name="audio_device_phone_speaker">Phone Speaker</string>
+    <string name="audio_device_bluetooth">Bluetooth Device</string>
+
+    <!-- Credits -->
+    <string name="credits_title">Credits &amp; Contributors</string>
+    <string name="credits_thanks">Thank you to all contributors who made this project possible!</string>
+    <string name="credits_view_on_github">View on GitHub</string>
+    <string name="credits_main_contributors">Main Contributors</string>
+    <string name="credits_translation_contributors">Translation Contributors</string>
+    <string name="credits_missing_language">Missing your language?</string>
+    <string name="credits_missing_language_summary">Help us make Lunaris Dolby better in your language! Submit or update translations on GitHub.</string>
+    <string name="credits_submit_pull_request">Submit a Pull Request</string>
+    <string name="credits_other_contributors">And all other contributors</string>
+    <string name="credits_other_contributors_summary">Check the GitHub repository for the complete list</string>
+    <string name="credits_contribution_ghost">Rewrite Dolby in Compose (Lunaris Dolby)</string>
+    <string name="credits_contribution_adithya">AOSPA Dolby Manager (Initial Code)</string>
+    <string name="credits_contribution_kenway">Base &amp; Treble Changes, EQ Tuning</string>
+    <string name="credits_contribution_tranquila">Adding per-device dolby state memory</string>
+    <string name="credits_contribution_pablo">AutoEQ headphone correction profiles</string>
 </resources>
