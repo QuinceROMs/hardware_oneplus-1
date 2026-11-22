@@ -12,12 +12,10 @@ import androidx.preference.ListPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceCategory
 import androidx.preference.SwitchPreferenceCompat
-import com.android.settingslib.widget.MainSwitchPreference
 import com.android.settingslib.widget.SettingsBasePreferenceFragment
 
 class DozeSettingsFragment :
     SettingsBasePreferenceFragment(), Preference.OnPreferenceChangeListener {
-    private lateinit var alwaysOnDisplayPreference: SwitchPreferenceCompat
 
     private var pickUpPreference: ListPreference? = null
     private var pocketPreference: SwitchPreferenceCompat? = null
@@ -28,14 +26,6 @@ class DozeSettingsFragment :
         setPreferencesFromResource(R.xml.doze_settings, rootKey)
 
         val dozeEnabled = Utils.isDozeEnabled(requireContext())
-        val switchBar = findPreference<MainSwitchPreference>(Utils.DOZE_ENABLE)!!
-        switchBar.onPreferenceChangeListener = this
-        switchBar.isChecked = dozeEnabled
-
-        alwaysOnDisplayPreference = findPreference(Utils.ALWAYS_ON_DISPLAY)!!
-        alwaysOnDisplayPreference.isEnabled = dozeEnabled
-        alwaysOnDisplayPreference.isChecked = Utils.isAlwaysOnEnabled(requireContext())
-        alwaysOnDisplayPreference.onPreferenceChangeListener = this
 
         val pickupSensorCategory =
             preferenceScreen.findPreference<PreferenceCategory>(Utils.CATEGORY_PICKUP_SENSOR)!!
@@ -50,44 +40,23 @@ class DozeSettingsFragment :
         }
 
         pickUpPreference = findPreference(Utils.GESTURE_PICK_UP_KEY)
-        pickUpPreference?.isEnabled = dozeEnabled
+        pickUpPreference?.isEnabled = if (Utils.alwaysOnDisplayAvailable(requireContext())) {
+            !Utils.isAlwaysOnEnabled(requireContext()) && dozeEnabled
+        } else {
+            dozeEnabled
+        }
         pickUpPreference?.onPreferenceChangeListener = this
 
         pocketPreference = findPreference(Utils.GESTURE_POCKET_KEY)
-        pocketPreference?.isEnabled = dozeEnabled
-        pocketPreference?.onPreferenceChangeListener = this
-
-        // Hide AOD if not supported and set all its dependents otherwise
-        if (!Utils.alwaysOnDisplayAvailable(requireContext())) {
-            preferenceScreen.removePreference(alwaysOnDisplayPreference)
+        pocketPreference?.isEnabled = if (Utils.alwaysOnDisplayAvailable(requireContext())) {
+            !Utils.isAlwaysOnEnabled(requireContext()) && dozeEnabled
         } else {
-            pickupSensorCategory.dependency = Utils.ALWAYS_ON_DISPLAY
-            proximitySensorCategory.dependency = Utils.ALWAYS_ON_DISPLAY
+            dozeEnabled
         }
+        pocketPreference?.onPreferenceChangeListener = this
     }
 
     override fun onPreferenceChange(preference: Preference, newValue: Any?): Boolean {
-        when (preference.key) {
-            Utils.ALWAYS_ON_DISPLAY -> {
-                val isChecked = newValue as Boolean
-                Utils.enableAlwaysOn(requireContext(), isChecked)
-            }
-            Utils.DOZE_ENABLE -> {
-                val isChecked = newValue as Boolean
-                Utils.enableDoze(requireContext(), isChecked)
-                Utils.checkDozeService(requireContext())
-
-                if (!isChecked) {
-                    Utils.enableAlwaysOn(requireContext(), false)
-                    alwaysOnDisplayPreference.isChecked = false
-                }
-
-                alwaysOnDisplayPreference.isEnabled = isChecked
-                pickUpPreference?.isEnabled = isChecked
-                pocketPreference?.isEnabled = isChecked
-            }
-        }
-
         handler.post { Utils.checkDozeService(requireContext()) }
         return true
     }
