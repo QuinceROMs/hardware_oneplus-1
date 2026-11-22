@@ -13,7 +13,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
@@ -129,8 +128,7 @@ private fun BandModeTile(
                 Box(contentAlignment = Alignment.Center) {
                     Text(
                         text = mode.value,
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.labelLargeEmphasized,
                         color = if (isSelected)
                             MaterialTheme.colorScheme.onPrimary
                         else
@@ -143,8 +141,8 @@ private fun BandModeTile(
             
             Text(
                 text = mode.displayName,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
+                style = if (isSelected) MaterialTheme.typography.labelSmallEmphasized
+                    else MaterialTheme.typography.labelSmall,
                 color = if (isSelected)
                     MaterialTheme.colorScheme.onPrimaryContainer
                 else
