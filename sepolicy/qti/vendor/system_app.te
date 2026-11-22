@@ -12,3 +12,5 @@ rw_dir_file(system_app, sysfs_vibrator)
 
 # Zram
 r_dir_file(system_app, sysfs_zram)
+
+allow system_app vendor_sysfs_sde_crtc:dir search;
