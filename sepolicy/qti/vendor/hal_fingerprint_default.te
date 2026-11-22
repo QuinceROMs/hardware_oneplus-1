@@ -23,6 +23,7 @@ allow hal_fingerprint_default tee_device:chr_file rw_file_perms;
 allow hal_fingerprint_default uhid_device:chr_file rw_file_perms;
 
 allow hal_fingerprint_default mnt_vendor_file:dir search;
+allow hal_fingerprint_default sysfs_leds_oplus:file r_file_perms;
 
 allowxperm hal_fingerprint_default fingerprint_vendor_data_file:file ioctl DMA_BUF_IOCTL_SYNC;
 
