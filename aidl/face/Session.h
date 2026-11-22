@@ -117,12 +117,15 @@ class Session : public BnSession {
     std::shared_ptr<Hardware> mHw;
     int32_t mUserId;
     std::shared_ptr<ISessionCallback> mCb;
-    WorkerThread mWorker;
 
     std::mutex mChallengeLock;
     std::set<int64_t> mChallenges;
 
     static std::map<int32_t, LockoutTracker> sLockouts;
+
+    // Declared last so it is destroyed first: its destructor joins the thread whose tasks use the
+    // members above.
+    WorkerThread mWorker;
 };
 
 }  // namespace aidl::android::hardware::biometrics::face
