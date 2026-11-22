@@ -11,3 +11,5 @@ allow hal_secure_element_default self:netlink_socket create_socket_perms_no_ioct
 allow hal_secure_element_default mnt_vendor_file:dir search;
 
 get_prop(hal_secure_element_default, system_oplus_project_prop)
+
+allow hal_secure_element_default nfc_device:chr_file { getattr };
