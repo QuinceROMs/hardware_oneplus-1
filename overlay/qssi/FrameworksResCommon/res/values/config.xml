@@ -32,6 +32,9 @@
          states. -->
     <bool name="config_dozeAlwaysOnDisplayAvailable">true</bool>
 
+    <!-- Doze: should the TYPE_PICK_UP_GESTURE sensor be used as a pulse signal. -->
+    <bool name="config_dozePulsePickup">true</bool>
+    
     <!-- Whether the wake screen on notifications feature is available. -->
     <bool name="config_pulseOnNotificationsAvailable">true</bool>
 
