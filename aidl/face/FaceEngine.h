@@ -64,9 +64,13 @@ class FaceEngine {
   private:
     bool loadSymbols();
     bool initLocked();
+    void releaseHandles();
 
     static char* sCmdline;
     static size_t sCmdlineSize;
+    // The SDK rejects a second license initialization in the same process.
+    static bool sLicensed;
+    static bool sLicensedSnpe;
 
     void* mLib = nullptr;
     void* mSnpeLib = nullptr;

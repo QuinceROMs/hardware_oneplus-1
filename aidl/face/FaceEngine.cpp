@@ -121,6 +121,8 @@ float averageBrightness(const Frame& frame, const cv_rect_t& rect) {
 
 char* FaceEngine::sCmdline = nullptr;
 size_t FaceEngine::sCmdlineSize = 0;
+bool FaceEngine::sLicensed = false;
+bool FaceEngine::sLicensedSnpe = false;
 
 void FaceEngine::setCmdline(char* cmdline, size_t size) {
     sCmdline = cmdline;
@@ -136,11 +138,16 @@ cv_face_t DetectedFace::get() {
 }
 
 FaceEngine::~FaceEngine() {
+    releaseHandles();
+}
+
+void FaceEngine::releaseHandles() {
     if (mDetector) destroyDetector(mDetector);
     if (mDetector640) destroyDetector(mDetector640);
     if (mOcular) destroyOcular(mOcular);
     if (mVerify) destroyVerify(mVerify);
     if (mHackness) destroyHackness(mHackness);
+    mDetector = mDetector640 = mOcular = mVerify = mHackness = nullptr;
 }
 
 bool FaceEngine::loadSymbols() {
@@ -186,6 +193,7 @@ bool FaceEngine::loadSymbols() {
     load(mSnpeLib, destroyHackness, "cv_face_hackness_destroy_snpe");
     load(mSnpeLib, resetHackness, "cv_face_hackness_reset_snpe");
     load(mSnpeLib, detectHackness, "cv_face_hackness_detect_with_landmarks_snpe");
+    if (!ok) mLib = nullptr;
     return ok;
 }
 
@@ -213,8 +221,10 @@ bool FaceEngine::initLocked() {
     std::string license;
     if (!models.open() || !models.read("res/raw/st_license_1_1.lic", &license)) return false;
 
-    int ret = initLicense(license.c_str());
-    int retSnpe = initLicenseSnpe(license.c_str());
+    int ret = sLicensed ? 0 : initLicense(license.c_str());
+    sLicensed = ret == 0;
+    int retSnpe = sLicensedSnpe ? 0 : initLicenseSnpe(license.c_str());
+    sLicensedSnpe = retSnpe == 0;
     if (ret != 0 || retSnpe != 0) {
         LOG(ERROR) << "License rejected: " << ret << ", " << retSnpe;
         return false;
@@ -237,6 +247,7 @@ bool FaceEngine::initLocked() {
         (ret = createVerify(&mVerify, verify.c_str())) ||
         (ret = createHackness(&mHackness, liveness.c_str()))) {
         LOG(ERROR) << "Failed to create ST handles: " << ret;
+        releaseHandles();
         return false;
     }
     return true;
