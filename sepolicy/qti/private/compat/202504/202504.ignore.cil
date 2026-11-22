@@ -5,6 +5,7 @@
 (typeattribute new_objects)
 (typeattributeset new_objects
   ( new_objects
+    opluscamera_app
     horae
     osense_service
     system_fingerprint_prop
