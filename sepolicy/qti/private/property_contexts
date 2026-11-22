@@ -46,8 +46,8 @@ vendor.property.debug.caliexif.enable                 u:object_r:exported_system
 
 # Display
 awb.purecolor.enable               u:object_r:exported_system_prop:s0
+persist.oplus.display.vrr.         u:object_r:exported_system_prop:s0
 awb.wbcore.                        u:object_r:exported_system_prop:s0
-persist.oplus.display.vrr.adfr     u:object_r:exported_system_prop:s0
 persist.sys.display.iris.absent    u:object_r:system_oplus_iris_prop:s0
 ro.oplus.display.                  u:object_r:exported_system_prop:s0
 
