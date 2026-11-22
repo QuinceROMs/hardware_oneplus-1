@@ -199,4 +199,5 @@
     <string name="dolby_autoeq_search">Поиск</string>
     <string name="dolby_autoeq_active">Активный профиль</string>
     <string name="dolby_autoeq_selected">Выбранный профиль</string>
+    <string name="dolby_summary">Окунитесь в иммерсивный звук</string>
 </resources>
