@@ -10,4 +10,5 @@ binder_call(hal_nfc_default, servicemanager)
 allow hal_nfc_default hal_tms_nfc_chip_name:file r_file_perms;
 allow hal_nfc_default proc_tms_logger:file r_file_perms;
 
+allow hal_nfc_default vendor_data_file:dir { search add_name };
 allow hal_nfc_default vendor_data_file:file { create getattr open read write };
