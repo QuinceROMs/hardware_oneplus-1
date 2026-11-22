@@ -5,6 +5,8 @@
 
 package org.lunaris.dolby.tile
 
+import android.content.Context
+import android.content.SharedPreferences
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
 import kotlinx.coroutines.CoroutineScope
@@ -13,26 +15,45 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.lunaris.dolby.DolbyConstants
 import org.lunaris.dolby.R
 import org.lunaris.dolby.data.DolbyDispatchers
 import org.lunaris.dolby.data.DolbyRepository
+import org.lunaris.dolby.service.DolbyEffectService
 
 class DolbyTileService : TileService() {
 
     private val repositoryLazy = lazy { DolbyRepository(applicationContext) }
     private val repository by repositoryLazy
     private val halScope = CoroutineScope(SupervisorJob() + DolbyDispatchers.hal)
+    private val prefs by lazy { getSharedPreferences("dolby_prefs", Context.MODE_PRIVATE) }
+    private val prefChangeListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == DolbyConstants.PREF_ENABLE || key == DolbyConstants.PREF_PROFILE) {
+            updateTile()
+        }
+    }
 
     override fun onStartListening() {
         super.onStartListening()
+        prefs.registerOnSharedPreferenceChangeListener(prefChangeListener)
         updateTile()
+    }
+
+    override fun onStopListening() {
+        prefs.unregisterOnSharedPreferenceChangeListener(prefChangeListener)
+        super.onStopListening()
     }
 
     override fun onClick() {
         super.onClick()
         halScope.launch {
-            val enabled = repository.getDolbyEnabled()
-            repository.setDolbyEnabled(!enabled)
+            val newState = !repository.getDolbyEnabled()
+            repository.setDolbyEnabled(newState)
+            if (newState) {
+                DolbyEffectService.start(applicationContext)
+            } else {
+                DolbyEffectService.stop(applicationContext)
+            }
         }
         updateTile()
     }
