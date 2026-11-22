@@ -171,4 +171,15 @@
     <string name="dolby_mid_enhancer">Peningkat mid</string>
     <string name="dolby_mid_level">Tingkat mid</string>
     <string name="dolby_mid_enhancer_summary">Meningkatkan frekuensi menengah untuk vokal dan instrumen yang lebih jernih</string>
+
+     <!-- AutoEQ Profile -->
+    <string name="dolby_autoeq_title">Terapkan Profil AutoEQ</string>
+    <string name="dolby_autoeq_applied">AutoEQ diterapkan untuk %1$s</string>
+    <string name="dolby_autoeq_preset_name">AutoEQ: %1$s</string>
+    <string name="dolby_autoeq_search_hint">Cari 8.000+ profil...</string>
+    <string name="dolby_autoeq_currently_applied">Saat Ini Diterapkan</string>
+    <string name="dolby_autoeq_clear">Hapus pencarian</string>
+    <string name="dolby_autoeq_search">Cari</string>
+    <string name="dolby_autoeq_active">Profil aktif</string>
+    <string name="dolby_autoeq_selected">Profil terpilih</string>
 </resources>
