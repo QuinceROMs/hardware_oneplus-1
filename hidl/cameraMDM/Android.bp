@@ -1,0 +1,23 @@
+//
+// Copyright (C) 2026 The LineageOS Project
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+
+cc_binary {
+    name: "vendor.oplus.hardware.cameraMDM@2.0-service",
+    defaults: ["hidl_defaults"],
+    init_rc: ["vendor.oplus.hardware.cameraMDM@2.0-service.rc"],
+    vendor: true,
+    relative_install_path: "hw",
+    srcs: [
+        "OPlusCameraMDM.cpp",
+        "service.cpp",
+    ],
+    shared_libs: [
+        "libbase",
+        "libhidlbase",
+        "libutils",
+        "vendor.oplus.hardware.cameraMDM@2.0",
+    ],
+}
