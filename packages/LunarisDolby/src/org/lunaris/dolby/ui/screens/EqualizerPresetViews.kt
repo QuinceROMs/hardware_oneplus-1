@@ -53,7 +53,7 @@ fun ModernPresetSelector(
                     .fillMaxWidth()
                     .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, true),
                 shape = MaterialTheme.shapes.large,
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                color = MaterialTheme.colorScheme.surfaceContainerHigh
             ) {
                 Row(
                     modifier = Modifier
@@ -137,18 +137,26 @@ internal fun SavePresetDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = {
-            Icon(
-                imageVector = Icons.Default.Save,
-                contentDescription = null,
-                modifier = Modifier.size(32.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
+            Surface(
+                modifier = Modifier.size(56.dp),
+                shape = MaterialTheme.shapes.large,
+                color = MaterialTheme.colorScheme.primaryContainer
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Default.Save,
+                        contentDescription = null,
+                        modifier = Modifier.size(28.dp),
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+            }
         },
-        title = { 
+        title = {
             Text(
                 stringResource(R.string.dolby_geq_new_preset),
                 style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface
             ) 
         },
@@ -169,13 +177,19 @@ internal fun SavePresetDialog(
                     isError = errorMessage != null,
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.medium,
+                    shape = MaterialTheme.shapes.large,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
                         errorBorderColor = MaterialTheme.colorScheme.error,
                         focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        focusedLabelColor = MaterialTheme.colorScheme.primary,
+                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        cursorColor = MaterialTheme.colorScheme.primary,
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        errorContainerColor = MaterialTheme.colorScheme.errorContainer
                     )
                 )
                 if (errorMessage != null) {
@@ -196,7 +210,7 @@ internal fun SavePresetDialog(
                         errorMessage = error
                     }
                 },
-                shape = MaterialTheme.shapes.medium,
+                shape = MaterialTheme.shapes.large,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary
@@ -208,16 +222,17 @@ internal fun SavePresetDialog(
         dismissButton = {
             TextButton(
                 onClick = onDismiss,
-                shape = MaterialTheme.shapes.medium
-            ) {
-                Text(
-                    stringResource(android.R.string.cancel),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                shape = MaterialTheme.shapes.large,
+                colors = ButtonDefaults.textButtonColors(
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            ) {
+                Text(stringResource(android.R.string.cancel))
             }
         },
         shape = MaterialTheme.shapes.extraLarge,
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        iconContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
         titleContentColor = MaterialTheme.colorScheme.onSurface,
         textContentColor = MaterialTheme.colorScheme.onSurfaceVariant
     )

@@ -47,7 +47,7 @@ fun AutoEqSelectionDialog(
             Text(
                 text = stringResource(id = R.string.dolby_autoeq_title),
                 style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface
             )
         },
@@ -56,8 +56,8 @@ fun AutoEqSelectionDialog(
 
                 Surface(
                     modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                    shape = MaterialTheme.shapes.extraLarge,
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                    shape = MaterialTheme.shapes.large,
+                    color = MaterialTheme.colorScheme.surfaceContainerHighest
                 ) {
                     TextField(
                         value = searchQuery,
@@ -77,7 +77,8 @@ fun AutoEqSelectionDialog(
                             focusedContainerColor = Color.Transparent,
                             unfocusedContainerColor = Color.Transparent,
                             focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent
+                            unfocusedIndicatorColor = Color.Transparent,
+                            cursorColor = MaterialTheme.colorScheme.primary
                         ),
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -94,15 +95,16 @@ fun AutoEqSelectionDialog(
                         )
                         Surface(
                             modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
-                            shape = MaterialTheme.shapes.medium,
-                            color = MaterialTheme.colorScheme.primaryContainer
+                            shape = MaterialTheme.shapes.large,
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                         ) {
                             Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text(text = activeEntry.name, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                                    Text(text = "${activeEntry.source} • ${activeEntry.measurementRig}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
+                                    Text(text = activeEntry.name, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                                    Text(text = "${activeEntry.source} • ${activeEntry.measurementRig}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
                                 }
-                                Icon(Icons.Default.CheckCircle, contentDescription = stringResource(R.string.dolby_autoeq_active), tint = MaterialTheme.colorScheme.primary)
+                                Icon(Icons.Default.CheckCircle, contentDescription = stringResource(R.string.dolby_autoeq_active), tint = MaterialTheme.colorScheme.onPrimaryContainer)
                             }
                         }
                         HorizontalDivider(modifier = Modifier.padding(bottom = 8.dp), color = MaterialTheme.colorScheme.outlineVariant)
@@ -128,8 +130,9 @@ fun AutoEqSelectionDialog(
                                     onDismiss()
                                 },
                                 modifier = Modifier.fillMaxWidth(),
-                                shape = MaterialTheme.shapes.medium,
-                                color = if (isSelected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                shape = if (isSelected) MaterialTheme.shapes.extraLarge else MaterialTheme.shapes.large,
+                                color = if (isSelected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+                                contentColor = if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurface
                             ) {
                                 Row(
                                     modifier = Modifier.padding(16.dp),
@@ -139,21 +142,21 @@ fun AutoEqSelectionDialog(
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
                                             text = entry.name,
-                                            fontWeight = FontWeight.Bold,
+                                            fontWeight = FontWeight.SemiBold,
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurface
                                         )
                                         Text(
                                             text = "${entry.source} • ${entry.measurementRig}",
                                             style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            color = if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
                                     if (isSelected) {
                                         Icon(
                                             imageVector = Icons.Default.Check,
                                             contentDescription = stringResource(R.string.dolby_autoeq_selected),
-                                            tint = MaterialTheme.colorScheme.secondary,
+                                            tint = MaterialTheme.colorScheme.onSecondaryContainer,
                                             modifier = Modifier.size(20.dp)
                                         )
                                     }
@@ -164,8 +167,20 @@ fun AutoEqSelectionDialog(
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(android.R.string.cancel)) } },
+        confirmButton = {
+            TextButton(
+                onClick = onDismiss,
+                shape = MaterialTheme.shapes.large,
+                colors = ButtonDefaults.textButtonColors(
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            ) {
+                Text(stringResource(android.R.string.cancel))
+            }
+        },
         shape = MaterialTheme.shapes.extraLarge,
-        containerColor = MaterialTheme.colorScheme.surface
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        titleContentColor = MaterialTheme.colorScheme.onSurface,
+        textContentColor = MaterialTheme.colorScheme.onSurfaceVariant
     )
 }

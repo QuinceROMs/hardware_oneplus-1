@@ -7,7 +7,6 @@ package org.lunaris.dolby.ui.screens
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -61,7 +60,7 @@ fun ModernEqualizerScreen(
                     Text(
                         stringResource(R.string.dolby_preset),
                         style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface
                     ) 
                 },
@@ -265,7 +264,7 @@ private fun ModernEqualizerContent(
             modifier = Modifier.fillMaxWidth(),
             shape = MaterialTheme.shapes.extraLarge,
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceBright
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
             )
         ) {
             ModernPresetSelector(
@@ -305,7 +304,7 @@ private fun ModernEqualizerContent(
                         Text(
                             text = stringResource(R.string.band_mode_mismatch),
                             style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onErrorContainer
                         )
                         Spacer(modifier = Modifier.height(4.dp))
@@ -324,7 +323,7 @@ private fun ModernEqualizerContent(
             modifier = Modifier.fillMaxWidth(),
             shape = MaterialTheme.shapes.extraLarge,
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceBright
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
             )
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
@@ -413,7 +412,7 @@ private fun CurveViewContent(
             .height(380.dp),
         shape = MaterialTheme.shapes.extraLarge,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceBright
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
         )
     ) {
         Column(
@@ -442,7 +441,7 @@ private fun CurveViewContent(
                     Text(
                         text = "${state.bandMode.bandCount} " + stringResource(R.string.dolby_geq_l_bands),
                         style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.SemiBold,
                         color = if (canEdit) MaterialTheme.colorScheme.onSecondaryContainer
                               else MaterialTheme.colorScheme.onErrorContainer,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
@@ -489,7 +488,7 @@ private fun SlidersViewContent(
                 .height(180.dp),
             shape = MaterialTheme.shapes.extraLarge,
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceBright
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
             )
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
@@ -533,7 +532,7 @@ private fun SlidersViewContent(
                 .height(380.dp),
             shape = MaterialTheme.shapes.extraLarge,
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceBright
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
             )
         ) {
             Column(
@@ -574,7 +573,7 @@ private fun SlidersViewContent(
                                 Text(
                                     text = stringResource(R.string.locked),
                                     style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
+                                    fontWeight = FontWeight.SemiBold,
                                     color = MaterialTheme.colorScheme.onErrorContainer
                                 )
                             }
@@ -630,14 +629,16 @@ private fun ViewModeTile(
         color = if (isSelected)
             MaterialTheme.colorScheme.primaryContainer
         else
-            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            MaterialTheme.colorScheme.surfaceContainerHigh,
+        contentColor = if (isSelected)
+            MaterialTheme.colorScheme.onPrimaryContainer
+        else
+            MaterialTheme.colorScheme.onSurface,
         shape = if (isSelected)
             MaterialTheme.shapes.extraLarge
         else
             MaterialTheme.shapes.large,
-        border = if (isSelected)
-            BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
-        else null
+        border = tileSelectionBorder(isSelected)
     ) {
         Row(
             modifier = Modifier
@@ -655,7 +656,7 @@ private fun ViewModeTile(
                 color = if (isSelected)
                     MaterialTheme.colorScheme.primary
                 else
-                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f)
+                    MaterialTheme.colorScheme.surfaceContainerHighest
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
@@ -675,7 +676,7 @@ private fun ViewModeTile(
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyLarge,
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
                 color = if (isSelected)
                     MaterialTheme.colorScheme.onPrimaryContainer
                 else

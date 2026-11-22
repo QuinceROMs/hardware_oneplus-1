@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import org.lunaris.dolby.domain.models.*
 import org.lunaris.dolby.utils.*
+import androidx.compose.ui.draw.clip
 
 @Composable
 fun ModernEqualizerBand(
@@ -49,7 +50,7 @@ fun ModernEqualizerBand(
         Surface(
             shape = MaterialTheme.shapes.small,
             color = if (enabled) MaterialTheme.colorScheme.primaryContainer
-                   else MaterialTheme.colorScheme.surfaceVariant
+                   else MaterialTheme.colorScheme.surfaceContainerHighest
         ) {
             Text(
                 text = "%.1f".format(sliderValue),
@@ -106,9 +107,11 @@ fun ModernEqualizerBand(
                             else MaterialTheme.colorScheme.outline,
                 activeTrackColor = if (enabled) MaterialTheme.colorScheme.primary
                                   else MaterialTheme.colorScheme.outline,
-                inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                inactiveTrackColor = if (enabled) MaterialTheme.colorScheme.secondaryContainer
+                                    else MaterialTheme.colorScheme.surfaceContainerHighest,
                 disabledThumbColor = MaterialTheme.colorScheme.outline,
-                disabledActiveTrackColor = MaterialTheme.colorScheme.outline
+                disabledActiveTrackColor = MaterialTheme.colorScheme.outline,
+                disabledInactiveTrackColor = MaterialTheme.colorScheme.surfaceContainerHighest
             )
         )
         Text(
@@ -126,25 +129,30 @@ internal fun FrequencyResponseCurve(
     bandGains: List<BandGain>,
     modifier: Modifier = Modifier
 ) {
-    val primaryColor = MaterialTheme.colorScheme.primary
-    val surfaceColor = MaterialTheme.colorScheme.surfaceVariant
-    
-    Canvas(modifier = modifier.background(surfaceColor.copy(alpha = 0.3f))) {
+    val curveColor = MaterialTheme.colorScheme.primary
+    val plotContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest
+    val plotInkColor = MaterialTheme.colorScheme.onSurfaceVariant
+
+    Canvas(
+        modifier = modifier
+            .clip(MaterialTheme.shapes.large)
+            .background(plotContainerColor)
+    ) {
         val width = size.width
         val height = size.height
         val centerY = height / 2
-        
+
         drawLine(
-            color = surfaceColor,
+            color = plotInkColor.copy(alpha = 0.5f),
             start = Offset(0f, centerY),
             end = Offset(width, centerY),
             strokeWidth = 2f
         )
-        
+
         for (i in 1..4) {
             val y = (height / 5) * i
             drawLine(
-                color = surfaceColor.copy(alpha = 0.3f),
+                color = plotInkColor.copy(alpha = 0.18f),
                 start = Offset(0f, y),
                 end = Offset(width, y),
                 strokeWidth = 1f
@@ -179,23 +187,23 @@ internal fun FrequencyResponseCurve(
             
             drawPath(
                 path = path,
-                color = primaryColor,
+                color = curveColor,
                 style = Stroke(width = 4f)
             )
-            
+
             val fillPath = Path().apply {
                 addPath(path)
                 lineTo(width, height)
                 lineTo(0f, height)
                 close()
             }
-            
+
             drawPath(
                 path = fillPath,
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        primaryColor.copy(alpha = 0.3f),
-                        primaryColor.copy(alpha = 0.05f)
+                        curveColor.copy(alpha = 0.28f),
+                        curveColor.copy(alpha = 0.04f)
                     )
                 )
             )
