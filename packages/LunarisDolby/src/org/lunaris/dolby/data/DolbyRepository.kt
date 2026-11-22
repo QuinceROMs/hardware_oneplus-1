@@ -22,7 +22,7 @@ import kotlinx.coroutines.flow.asStateFlow
 class DolbyRepository(private val context: Context) : AutoCloseable {
 
     private val audioManager = context.getSystemService(AudioManager::class.java)
-    private var dolbyEffect = createDolbyEffect()
+    @Volatile private var dolbyEffect = createDolbyEffect()
     
     private val defaultPrefs = context.getSharedPreferences("dolby_prefs", Context.MODE_PRIVATE)
     private val presetsPrefs = context.getSharedPreferences(DolbyConstants.PREF_FILE_PRESETS, Context.MODE_PRIVATE)
@@ -36,7 +36,7 @@ class DolbyRepository(private val context: Context) : AutoCloseable {
     val stereoWideningSupported = context.resources.getBoolean(R.bool.dolby_stereo_widening_supported)
     val volumeLevelerSupported = context.resources.getBoolean(R.bool.dolby_volume_leveler_supported)
     
-    private var isReleased = false
+    @Volatile private var isReleased = false
     
     private var cachedPresets: List<EqualizerPreset>? = null
     private val presetCacheLock = Any()
@@ -121,7 +121,7 @@ class DolbyRepository(private val context: Context) : AutoCloseable {
     }
 
     fun applySavedState() {
-    checkEffect()
+        checkEffect()
         val enabled = defaultPrefs.getBoolean(DolbyConstants.PREF_ENABLE, false)
         dolbyEffect.dsOn = enabled
         if (enabled) {
@@ -169,7 +169,6 @@ class DolbyRepository(private val context: Context) : AutoCloseable {
     fun getCurrentProfile(): Int {
         return try {
             checkEffect()
-            restoreSavedProfileIfNeeded()
             dolbyEffect.profile
         } catch (e: Exception) {
             DolbyConstants.dlog(TAG, "Error getting current profile: ${e.message}")
@@ -237,26 +236,48 @@ class DolbyRepository(private val context: Context) : AutoCloseable {
         defaultPrefs.edit().putString(DolbyConstants.PREF_BAND_MODE, mode.value).apply()
     }
 
-    fun getBassEnhancerEnabled(profile: Int): Boolean {
-        return try {
-            dolbyEffect.getDapParameterBool(DsParam.BASS_ENHANCER_ENABLE, profile)
+    private fun getDapBool(param: DsParam, profile: Int, label: String): Boolean =
+        try {
+            dolbyEffect.getDapParameterBool(param, profile)
         } catch (e: Exception) {
-            DolbyConstants.dlog(TAG, "Error getting bass enhancer: ${e.message}")
+            DolbyConstants.dlog(TAG, "Error getting $label: ${e.message}")
             false
+        }
+
+    private fun setDapBool(param: DsParam, prefKey: String, profile: Int, enabled: Boolean, label: String) {
+        if (isReleased) return
+        try {
+            checkEffect()
+            dolbyEffect.setDapParameter(param, enabled, profile)
+            getProfilePrefs(profile).edit().putBoolean(prefKey, enabled).apply()
+        } catch (e: Exception) {
+            DolbyConstants.dlog(TAG, "Error setting $label: ${e.message}")
         }
     }
 
-    fun setBassEnhancerEnabled(profile: Int, enabled: Boolean) {
+    private fun getDapInt(param: DsParam, profile: Int, default: Int, label: String): Int =
+        try {
+            dolbyEffect.getDapParameterInt(param, profile)
+        } catch (e: Exception) {
+            DolbyConstants.dlog(TAG, "Error getting $label: ${e.message}")
+            default
+        }
+
+    private fun setDapInt(param: DsParam, prefKey: String, profile: Int, value: Int, label: String) {
         if (isReleased) return
-        
         try {
             checkEffect()
-            dolbyEffect.setDapParameter(DsParam.BASS_ENHANCER_ENABLE, enabled, profile)
-            getProfilePrefs(profile).edit().putBoolean(DolbyConstants.PREF_BASS, enabled).apply()
+            dolbyEffect.setDapParameter(param, value, profile)
+            getProfilePrefs(profile).edit().putInt(prefKey, value).apply()
         } catch (e: Exception) {
-            DolbyConstants.dlog(TAG, "Error setting bass enhancer: ${e.message}")
+            DolbyConstants.dlog(TAG, "Error setting $label: ${e.message}")
         }
     }
+
+    fun getBassEnhancerEnabled(profile: Int) = getDapBool(DsParam.BASS_ENHANCER_ENABLE, profile, "bass enhancer")
+
+    fun setBassEnhancerEnabled(profile: Int, enabled: Boolean) =
+        setDapBool(DsParam.BASS_ENHANCER_ENABLE, DolbyConstants.PREF_BASS, profile, enabled, "bass enhancer")
 
     fun getBassLevel(profile: Int): Int {
         val prefs = getProfilePrefs(profile)
@@ -422,36 +443,20 @@ class DolbyRepository(private val context: Context) : AutoCloseable {
         }
     }
 
-    fun getVolumeLevelerEnabled(profile: Int): Boolean {
-        if (!volumeLevelerSupported) return false
-        return try {
-            dolbyEffect.getDapParameterBool(DsParam.VOLUME_LEVELER_ENABLE, profile)
-        } catch (e: Exception) {
-            DolbyConstants.dlog(TAG, "Error getting volume leveler: ${e.message}")
+    fun getVolumeLevelerEnabled(profile: Int): Boolean =
+        if (volumeLevelerSupported) {
+            getDapBool(DsParam.VOLUME_LEVELER_ENABLE, profile, "volume leveler")
+        } else {
             false
         }
-    }
 
     fun setVolumeLevelerEnabled(profile: Int, enabled: Boolean) {
-        if (!volumeLevelerSupported || isReleased) return
-        
-        try {
-            checkEffect()
-            dolbyEffect.setDapParameter(DsParam.VOLUME_LEVELER_ENABLE, enabled, profile)
-            getProfilePrefs(profile).edit().putBoolean(DolbyConstants.PREF_VOLUME, enabled).apply()
-        } catch (e: Exception) {
-            DolbyConstants.dlog(TAG, "Error setting volume leveler: ${e.message}")
+        if (volumeLevelerSupported) {
+            setDapBool(DsParam.VOLUME_LEVELER_ENABLE, DolbyConstants.PREF_VOLUME, profile, enabled, "volume leveler")
         }
     }
 
-    fun getIeqPreset(profile: Int): Int {
-        return try {
-            dolbyEffect.getDapParameterInt(DsParam.IEQ_PRESET, profile)
-        } catch (e: Exception) {
-            DolbyConstants.dlog(TAG, "Error getting IEQ preset: ${e.message}")
-            0
-        }
-    }
+    fun getIeqPreset(profile: Int): Int = getDapInt(DsParam.IEQ_PRESET, profile, 0, "IEQ preset")
 
     fun setIeqPreset(profile: Int, preset: Int) {
         if (isReleased) return
@@ -465,111 +470,39 @@ class DolbyRepository(private val context: Context) : AutoCloseable {
         }
     }
 
-    fun getHeadphoneVirtualizerEnabled(profile: Int): Boolean {
-        return try {
-            dolbyEffect.getDapParameterBool(DsParam.HEADPHONE_VIRTUALIZER, profile)
-        } catch (e: Exception) {
-            DolbyConstants.dlog(TAG, "Error getting headphone virtualizer: ${e.message}")
-            false
-        }
-    }
+    fun getHeadphoneVirtualizerEnabled(profile: Int) = getDapBool(DsParam.HEADPHONE_VIRTUALIZER, profile, "headphone virtualizer")
 
-    fun setHeadphoneVirtualizerEnabled(profile: Int, enabled: Boolean) {
-        if (isReleased) return
-        
-        try {
-            checkEffect()
-            dolbyEffect.setDapParameter(DsParam.HEADPHONE_VIRTUALIZER, enabled, profile)
-            getProfilePrefs(profile).edit().putBoolean(DolbyConstants.PREF_HP_VIRTUALIZER, enabled).apply()
-        } catch (e: Exception) {
-            DolbyConstants.dlog(TAG, "Error setting headphone virtualizer: ${e.message}")
-        }
-    }
+    fun setHeadphoneVirtualizerEnabled(profile: Int, enabled: Boolean) =
+        setDapBool(DsParam.HEADPHONE_VIRTUALIZER, DolbyConstants.PREF_HP_VIRTUALIZER, profile, enabled, "headphone virtualizer")
 
-    fun getSpeakerVirtualizerEnabled(profile: Int): Boolean {
-        return try {
-            dolbyEffect.getDapParameterBool(DsParam.SPEAKER_VIRTUALIZER, profile)
-        } catch (e: Exception) {
-            DolbyConstants.dlog(TAG, "Error getting speaker virtualizer: ${e.message}")
-            false
-        }
-    }
+    fun getSpeakerVirtualizerEnabled(profile: Int) = getDapBool(DsParam.SPEAKER_VIRTUALIZER, profile, "speaker virtualizer")
 
-    fun setSpeakerVirtualizerEnabled(profile: Int, enabled: Boolean) {
-        if (isReleased) return
-        
-        try {
-            checkEffect()
-            dolbyEffect.setDapParameter(DsParam.SPEAKER_VIRTUALIZER, enabled, profile)
-            getProfilePrefs(profile).edit().putBoolean(DolbyConstants.PREF_SPK_VIRTUALIZER, enabled).apply()
-        } catch (e: Exception) {
-            DolbyConstants.dlog(TAG, "Error setting speaker virtualizer: ${e.message}")
-        }
-    }
+    fun setSpeakerVirtualizerEnabled(profile: Int, enabled: Boolean) =
+        setDapBool(DsParam.SPEAKER_VIRTUALIZER, DolbyConstants.PREF_SPK_VIRTUALIZER, profile, enabled, "speaker virtualizer")
 
-    fun getStereoWideningAmount(profile: Int): Int {
-        if (!stereoWideningSupported) return 0
-        return try {
-            dolbyEffect.getDapParameterInt(DsParam.STEREO_WIDENING_AMOUNT, profile)
-        } catch (e: Exception) {
-            DolbyConstants.dlog(TAG, "Error getting stereo widening: ${e.message}")
-            32
+    fun getStereoWideningAmount(profile: Int): Int =
+        if (stereoWideningSupported) {
+            getDapInt(DsParam.STEREO_WIDENING_AMOUNT, profile, 32, "stereo widening")
+        } else {
+            0
         }
-    }
 
     fun setStereoWideningAmount(profile: Int, amount: Int) {
-        if (!stereoWideningSupported || isReleased) return
-        
-        try {
-            checkEffect()
-            dolbyEffect.setDapParameter(DsParam.STEREO_WIDENING_AMOUNT, amount, profile)
-            getProfilePrefs(profile).edit().putInt(DolbyConstants.PREF_STEREO_WIDENING, amount).apply()
-        } catch (e: Exception) {
-            DolbyConstants.dlog(TAG, "Error setting stereo widening: ${e.message}")
+        if (stereoWideningSupported) {
+            setDapInt(DsParam.STEREO_WIDENING_AMOUNT, DolbyConstants.PREF_STEREO_WIDENING, profile, amount, "stereo widening")
         }
     }
 
-    fun getDialogueEnhancerEnabled(profile: Int): Boolean {
-        return try {
-            dolbyEffect.getDapParameterBool(DsParam.DIALOGUE_ENHANCER_ENABLE, profile)
-        } catch (e: Exception) {
-            DolbyConstants.dlog(TAG, "Error getting dialogue enhancer: ${e.message}")
-            false
-        }
-    }
+    fun getDialogueEnhancerEnabled(profile: Int) = getDapBool(DsParam.DIALOGUE_ENHANCER_ENABLE, profile, "dialogue enhancer")
 
-    fun setDialogueEnhancerEnabled(profile: Int, enabled: Boolean) {
-        if (isReleased) return
-        
-        try {
-            checkEffect()
-            dolbyEffect.setDapParameter(DsParam.DIALOGUE_ENHANCER_ENABLE, enabled, profile)
-            getProfilePrefs(profile).edit().putBoolean(DolbyConstants.PREF_DIALOGUE, enabled).apply()
-        } catch (e: Exception) {
-            DolbyConstants.dlog(TAG, "Error setting dialogue enhancer: ${e.message}")
-        }
-    }
+    fun setDialogueEnhancerEnabled(profile: Int, enabled: Boolean) =
+        setDapBool(DsParam.DIALOGUE_ENHANCER_ENABLE, DolbyConstants.PREF_DIALOGUE, profile, enabled, "dialogue enhancer")
 
-    fun getDialogueEnhancerAmount(profile: Int): Int {
-        return try {
-            dolbyEffect.getDapParameterInt(DsParam.DIALOGUE_ENHANCER_AMOUNT, profile)
-        } catch (e: Exception) {
-            DolbyConstants.dlog(TAG, "Error getting dialogue enhancer amount: ${e.message}")
-            6
-        }
-    }
+    fun getDialogueEnhancerAmount(profile: Int): Int =
+        getDapInt(DsParam.DIALOGUE_ENHANCER_AMOUNT, profile, 6, "dialogue enhancer amount")
 
-    fun setDialogueEnhancerAmount(profile: Int, amount: Int) {
-        if (isReleased) return
-        
-        try {
-            checkEffect()
-            dolbyEffect.setDapParameter(DsParam.DIALOGUE_ENHANCER_AMOUNT, amount, profile)
-            getProfilePrefs(profile).edit().putInt(DolbyConstants.PREF_DIALOGUE_AMOUNT, amount).apply()
-        } catch (e: Exception) {
-            DolbyConstants.dlog(TAG, "Error setting dialogue enhancer amount: ${e.message}")
-        }
-    }
+    fun setDialogueEnhancerAmount(profile: Int, amount: Int) =
+        setDapInt(DsParam.DIALOGUE_ENHANCER_AMOUNT, DolbyConstants.PREF_DIALOGUE_AMOUNT, profile, amount, "dialogue enhancer amount")
 
     fun getEqualizerGains(profile: Int, bandMode: BandMode): List<BandGain> {
         return try {

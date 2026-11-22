@@ -20,7 +20,7 @@
     <string name="dolby_on_with_profile">Włączone (%1$s)</string>
     <string name="dolby_category_settings">Dostrajanie dźwięku</string>
     <string name="dolby_category_adv_settings">Ustawienia zaawansowane</string>
-    <string name="dolby_adv_settings_footer">Wybierz inny profil, aby wyświetlić ustawienia zaawansowane.</string>
+    <string name="dolby_adv_settings_footer">Włącz Dolby Atmos, aby uzyskać dostęp do ustawień zaawansowanych.</string>
     <string name="dolby_bass_enhancer">Wzmocnienie basu</string>
     <string name="dolby_bass_level">Poziom basu</string>
     <string name="dolby_bass_curve">Charakterystyka basu</string>

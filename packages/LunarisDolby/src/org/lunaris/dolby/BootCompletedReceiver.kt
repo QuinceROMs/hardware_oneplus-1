@@ -10,8 +10,8 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.provider.Settings
+import android.service.notification.NotificationListenerService
 import android.util.Log
-import org.lunaris.dolby.data.DolbyRepository
 import org.lunaris.dolby.service.AppProfileMonitorService
 import org.lunaris.dolby.service.DolbyEffectService
 import org.lunaris.dolby.service.DolbyNotificationListener
@@ -24,8 +24,6 @@ class BootCompletedReceiver : BroadcastReceiver() {
             Intent.ACTION_LOCKED_BOOT_COMPLETED,
             Intent.ACTION_BOOT_COMPLETED -> {
                 try {
-                    val repository = DolbyRepository(context)
-                    
                     DolbyEffectService.start(context)
                     
                     val prefs = context.getSharedPreferences("dolby_prefs", Context.MODE_PRIVATE)
@@ -50,16 +48,9 @@ class BootCompletedReceiver : BroadcastReceiver() {
     }
 
     private fun requestNotificationListenerRebind(context: Context) {
-        try {
-            val cn = ComponentName(context, DolbyNotificationListener::class.java)
-            DolbyNotificationListener::class.java.getMethod(
-                "requestRebind",
-                ComponentName::class.java
-            ).invoke(null, cn)
-            Log.d(TAG, "Requested notification listener rebind")
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to request notification listener rebind", e)
-        }
+        val cn = ComponentName(context, DolbyNotificationListener::class.java)
+        NotificationListenerService.requestRebind(cn)
+        Log.d(TAG, "Requested notification listener rebind")
     }
 
     companion object {

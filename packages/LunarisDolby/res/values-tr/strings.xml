@@ -16,7 +16,7 @@
     <string name="dolby_on_with_profile">Açık (%1$s)</string>
     <string name="dolby_category_settings">Ses ayarları</string>
     <string name="dolby_category_adv_settings">Gelişmiş ayarlar</string>
-    <string name="dolby_adv_settings_footer">Gelişmiş ayarları görmek için farklı bir profil seçin.</string>
+    <string name="dolby_adv_settings_footer">Gelişmiş ayarlara erişmek için Dolby Atmos\'u etkinleştirin.</string>
     <string name="dolby_bass_enhancer">Bas güçlendirici</string>
     <string name="dolby_bass_level">Bas seviyesi</string>
     <string name="dolby_bass_curve">Bas eğrisi</string>

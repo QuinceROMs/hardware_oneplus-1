@@ -13,9 +13,10 @@ import org.lunaris.dolby.R
 import org.lunaris.dolby.data.AppProfileManager
 import org.lunaris.dolby.domain.models.AppProfileUiState
 import org.lunaris.dolby.utils.ToastHelper
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.withContext
 
 class AppProfileViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -25,36 +26,26 @@ class AppProfileViewModel(application: Application) : AndroidViewModel(applicati
     private val _uiState = MutableStateFlow<AppProfileUiState>(AppProfileUiState.Loading)
     val uiState: StateFlow<AppProfileUiState> = _uiState.asStateFlow()
     
-    private var isCleared = false
-
     init {
         DolbyConstants.dlog(TAG, "ViewModel initialized")
         loadApps()
     }
 
     fun loadApps() {
-        if (isCleared) {
-            DolbyConstants.dlog(TAG, "ViewModel cleared, skipping loadApps")
-            return
-        }
-        
         viewModelScope.launch {
             try {
                 _uiState.value = AppProfileUiState.Loading
-                val apps = appProfileManager.getInstalledApps()
-                val appsWithProfiles = appProfileManager.getAppsWithProfiles()
-                
-                if (!isCleared) {
-                    _uiState.value = AppProfileUiState.Success(
-                        apps = apps,
-                        appsWithProfiles = appsWithProfiles
-                    )
+                val (apps, appsWithProfiles) = withContext(Dispatchers.IO) {
+                    appProfileManager.getInstalledApps() to appProfileManager.getAppsWithProfiles()
                 }
+
+                _uiState.value = AppProfileUiState.Success(
+                    apps = apps,
+                    appsWithProfiles = appsWithProfiles
+                )
             } catch (e: Exception) {
-                if (!isCleared) {
-                    DolbyConstants.dlog(TAG, "Error loading apps: ${e.message}")
-                    _uiState.value = AppProfileUiState.Error(e.message ?: "Unknown error")
-                }
+                DolbyConstants.dlog(TAG, "Error loading apps: ${e.message}")
+                _uiState.value = AppProfileUiState.Error(e.message ?: "Unknown error")
             }
         }
     }
@@ -63,10 +54,10 @@ class AppProfileViewModel(application: Application) : AndroidViewModel(applicati
         viewModelScope.launch {
             try {
                 if (profile == -1) {
-                    appProfileManager.removeAppProfile(packageName)
+                    withContext(Dispatchers.IO) { appProfileManager.removeAppProfile(packageName) }
                     ToastHelper.showToast(context, "Profile reset to default")
                 } else {
-                    appProfileManager.setAppProfile(packageName, profile)
+                    withContext(Dispatchers.IO) { appProfileManager.setAppProfile(packageName, profile) }
                     val profileName = getProfileName(profile)
                     ToastHelper.showToast(context, "Profile set to: $profileName")
                 }
@@ -80,7 +71,7 @@ class AppProfileViewModel(application: Application) : AndroidViewModel(applicati
     fun removeAppProfile(packageName: String) {
         viewModelScope.launch {
             try {
-                appProfileManager.removeAppProfile(packageName)
+                withContext(Dispatchers.IO) { appProfileManager.removeAppProfile(packageName) }
                 ToastHelper.showToast(context, "Profile removed")
                 loadApps()
             } catch (e: Exception) {
@@ -92,7 +83,7 @@ class AppProfileViewModel(application: Application) : AndroidViewModel(applicati
     fun clearAllAppProfiles() {
         viewModelScope.launch {
             try {
-                appProfileManager.clearAllAppProfiles()
+                withContext(Dispatchers.IO) { appProfileManager.clearAllAppProfiles() }
                 ToastHelper.showToast(context, "All app profiles cleared")
                 loadApps()
             } catch (e: Exception) {
@@ -116,8 +107,6 @@ class AppProfileViewModel(application: Application) : AndroidViewModel(applicati
     
     override fun onCleared() {
         DolbyConstants.dlog(TAG, "ViewModel onCleared")
-        isCleared = true
-        viewModelScope.coroutineContext.cancelChildren()
         super.onCleared()
     }
     

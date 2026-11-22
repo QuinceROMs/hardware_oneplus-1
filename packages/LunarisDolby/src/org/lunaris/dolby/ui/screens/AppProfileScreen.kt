@@ -169,9 +169,11 @@ fun AppProfileScreen(
                             }
                         }
                     }
-                    val filteredApps = state.apps.filter { app ->
-                        app.appName.contains(searchQuery, ignoreCase = true) ||
-                        app.packageName.contains(searchQuery, ignoreCase = true)
+                    val filteredApps = remember(state.apps, searchQuery) {
+                        state.apps.filter { app ->
+                            app.appName.contains(searchQuery, ignoreCase = true) ||
+                            app.packageName.contains(searchQuery, ignoreCase = true)
+                        }
                     }
 
                     if (filteredApps.isEmpty()) {
@@ -293,9 +295,10 @@ private fun AppProfileItem(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            app.icon?.let { icon ->
+            val iconBitmap = remember(app.packageName) { app.icon?.toBitmap()?.asImageBitmap() }
+            iconBitmap?.let { bitmap ->
                 Image(
-                    bitmap = icon.toBitmap().asImageBitmap(),
+                    bitmap = bitmap,
                     contentDescription = app.appName,
                     modifier = Modifier
                         .size(48.dp)
