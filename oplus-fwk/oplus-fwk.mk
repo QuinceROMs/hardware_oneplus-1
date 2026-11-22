@@ -6,3 +6,7 @@
 
 PRODUCT_PACKAGES += oplus-fwk
 PRODUCT_BOOT_JARS += oplus-fwk
+
+# OPlus stub providers
+PRODUCT_PACKAGES += \
+    OplusStubProviders
