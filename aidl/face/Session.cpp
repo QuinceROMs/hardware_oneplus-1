@@ -714,7 +714,9 @@ ndk::ScopedAStatus Session::resetLockout(const keymaster::HardwareAuthToken&) {
 }
 
 ndk::ScopedAStatus Session::close() {
-    mCb->onSessionClosed();
+    // The framework closes the session once it gives up waiting for a cancellation, and routes any
+    // later callback of that operation to its current client, which may belong to the next session.
+    schedule([this](const std::future<void>&) { mCb->onSessionClosed(); });
     return ndk::ScopedAStatus::ok();
 }
 
