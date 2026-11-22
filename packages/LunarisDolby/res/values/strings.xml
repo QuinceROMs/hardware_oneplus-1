@@ -297,4 +297,5 @@
     <string name="credits_contribution_kenway">Base &amp; Treble Changes, EQ Tuning</string>
     <string name="credits_contribution_tranquila">Adding per-device dolby state memory</string>
     <string name="credits_contribution_pablo">AutoEQ headphone correction profiles</string>
+    <string name="credits_contribution_quince">Optimizations, fixes and localization</string>
 </resources>

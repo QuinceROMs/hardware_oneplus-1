@@ -291,5 +291,6 @@
     <string name="credits_contribution_kenway">Zmiany basu i wysokich tonów, strojenie korektora</string>
     <string name="credits_contribution_tranquila">Pamięć ustawień Dolby dla każdego urządzenia</string>
     <string name="credits_contribution_pablo">Profile korekcji słuchawek AutoEQ</string>
+    <string name="credits_contribution_quince">Optymalizacje, poprawki i lokalizacja</string>
 </resources>
 
