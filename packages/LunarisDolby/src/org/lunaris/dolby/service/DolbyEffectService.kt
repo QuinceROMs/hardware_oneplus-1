@@ -14,6 +14,7 @@ import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.media.AudioPlaybackConfiguration
 import android.os.Handler
+import android.os.Looper
 import android.content.SharedPreferences
 import android.os.IBinder
 import android.util.Log
@@ -36,7 +37,7 @@ class DolbyEffectService : Service() {
     }
     private val isDeviceStateMemoryEnabled: Boolean
         get() = dolbyPrefs.getBoolean(DolbyConstants.PREF_DEVICE_STATE_MEMORY, false)
-    private val handler = Handler()
+    private val handler = Handler(Looper.getMainLooper())
     private val halScope = CoroutineScope(SupervisorJob() + DolbyDispatchers.hal)
     private var applyJob: Job? = null
     private lateinit var repository: DolbyRepository

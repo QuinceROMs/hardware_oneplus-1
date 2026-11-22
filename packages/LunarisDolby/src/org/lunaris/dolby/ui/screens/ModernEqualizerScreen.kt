@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -339,7 +340,7 @@ private fun ModernEqualizerContent(
                 ) {
                     ViewModeTile(
                         title = stringResource(R.string.dolby_geq_view_curve),
-                        icon = Icons.Default.ShowChart,
+                        icon = Icons.AutoMirrored.Filled.ShowChart,
                         isSelected = viewMode == EqualizerViewMode.CURVE,
                         onClick = { onViewModeChange(EqualizerViewMode.CURVE) },
                         modifier = Modifier.weight(1f)
