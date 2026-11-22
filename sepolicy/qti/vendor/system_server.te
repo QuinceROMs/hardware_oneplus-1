@@ -8,3 +8,4 @@ rw_dir_file(system_server, vendor_sysfs_usb_supply)
 rw_dir_file(system_server, vendor_proc_oplus_scheduler)
 
 allow system_server vendor_proc_charger:dir search;
+allow system_server vendor_proc_oppo_secure_common_file:dir search;
