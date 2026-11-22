@@ -15,6 +15,7 @@ import android.net.Uri
 import android.os.Bundle
 import org.lunaris.dolby.R
 import org.lunaris.dolby.data.DolbyRepository
+import org.lunaris.dolby.domain.models.dolbyProfileName
 
 private const val KEY_DOLBY = "dolby"
 private const val META_DATA_PREFERENCE_SUMMARY = "com.android.settings.summary"
@@ -62,16 +63,7 @@ class SummaryProvider : ContentProvider() {
             return context.getString(R.string.dolby_off)
         }
         
-        val profile = repository.getCurrentProfile()
-        val profiles = context.resources.getStringArray(R.array.dolby_profile_entries)
-        val profileValues = context.resources.getStringArray(R.array.dolby_profile_values)
-        
-        return try {
-            val index = profileValues.indexOf(profile.toString())
-            val profileName = if (index != -1) profiles[index] else context.getString(R.string.dolby_unknown)
-            context.getString(R.string.dolby_on_with_profile, profileName)
-        } catch (e: Exception) {
-            context.getString(R.string.dolby_on)
-        }
+        val profileName = dolbyProfileName(context, repository.getCurrentProfile())
+        return context.getString(R.string.dolby_on_with_profile, profileName)
     }
 }

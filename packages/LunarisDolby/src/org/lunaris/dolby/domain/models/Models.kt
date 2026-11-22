@@ -23,6 +23,12 @@ enum class BandMode(val value: String, val bandCount: Int) {
 fun BandMode.label(context: Context): String =
     context.resources.getQuantityString(R.plurals.band_count, bandCount, bandCount)
 
+fun dolbyProfileName(context: Context, profile: Int): String {
+    val index = context.resources.getStringArray(R.array.dolby_profile_values).indexOf(profile.toString())
+    return context.resources.getStringArray(R.array.dolby_profile_entries).getOrNull(index)
+        ?: context.getString(R.string.dolby_unknown)
+}
+
 data class DolbyProfile(
     val id: Int,
     val nameResId: Int

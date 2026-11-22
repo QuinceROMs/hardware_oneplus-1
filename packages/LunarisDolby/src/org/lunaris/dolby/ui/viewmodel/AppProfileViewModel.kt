@@ -12,6 +12,7 @@ import org.lunaris.dolby.DolbyConstants
 import org.lunaris.dolby.R
 import org.lunaris.dolby.data.AppProfileManager
 import org.lunaris.dolby.domain.models.AppProfileUiState
+import org.lunaris.dolby.domain.models.dolbyProfileName
 import org.lunaris.dolby.utils.ToastHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
@@ -58,7 +59,7 @@ class AppProfileViewModel(application: Application) : AndroidViewModel(applicati
                     ToastHelper.showToast(context, context.getString(R.string.app_profiles_reset_toast))
                 } else {
                     withContext(Dispatchers.IO) { appProfileManager.setAppProfile(packageName, profile) }
-                    val profileName = getProfileName(profile)
+                    val profileName = dolbyProfileName(context, profile)
                     ToastHelper.showToast(context, context.getString(R.string.app_profiles_set_toast, profileName))
                 }
                 loadApps()
@@ -89,19 +90,6 @@ class AppProfileViewModel(application: Application) : AndroidViewModel(applicati
             } catch (e: Exception) {
                 DolbyConstants.dlog(TAG, "Error clearing app profiles: ${e.message}")
             }
-        }
-    }
-    
-    private fun getProfileName(profile: Int): String {
-        return try {
-            val profiles = context.resources.getStringArray(R.array.dolby_profile_entries)
-            val profileValues = context.resources.getStringArray(R.array.dolby_profile_values)
-            
-            val index = profileValues.indexOfFirst { it.toInt() == profile }
-            if (index >= 0) profiles[index] else context.getString(R.string.dolby_unknown)
-        } catch (e: Exception) {
-            DolbyConstants.dlog(TAG, "Error getting profile name: ${e.message}")
-            context.getString(R.string.dolby_unknown)
         }
     }
     

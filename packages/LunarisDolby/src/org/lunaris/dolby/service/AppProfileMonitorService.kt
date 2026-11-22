@@ -23,10 +23,10 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.lunaris.dolby.DolbyConstants
-import org.lunaris.dolby.R
 import org.lunaris.dolby.data.AppProfileManager
 import org.lunaris.dolby.data.DolbyDispatchers
 import org.lunaris.dolby.data.DolbyRepository
+import org.lunaris.dolby.domain.models.dolbyProfileName
 import org.lunaris.dolby.utils.ToastHelper
 import java.util.concurrent.atomic.AtomicReference
 
@@ -199,7 +199,7 @@ class AppProfileMonitorService : Service() {
                                 DolbyConstants.dlog(TAG, "App profile active - original profile remains: $originalProfile")
                                 
                                 if (showToasts) {
-                                    val profileName = getProfileName(assignedProfile)
+                                    val profileName = dolbyProfileName(this@AppProfileMonitorService, assignedProfile)
                                     val appName = getAppName(packageName)
                                     ToastHelper.showToast(
                                         this@AppProfileMonitorService,
@@ -257,18 +257,6 @@ class AppProfileMonitorService : Service() {
         }
         
         return lastPackage
-    }
-    
-    private fun getProfileName(profile: Int): String {
-        val profiles = resources.getStringArray(R.array.dolby_profile_entries)
-        val profileValues = resources.getStringArray(R.array.dolby_profile_values)
-        
-        return try {
-            val index = profileValues.indexOfFirst { it.toInt() == profile }
-            if (index >= 0) profiles[index] else getString(R.string.dolby_unknown)
-        } catch (e: Exception) {
-            getString(R.string.dolby_unknown)
-        }
     }
     
     private fun getAppName(packageName: String): String {
