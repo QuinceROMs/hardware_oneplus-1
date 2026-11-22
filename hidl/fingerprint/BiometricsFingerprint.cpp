@@ -33,7 +33,13 @@ BiometricsFingerprint::BiometricsFingerprint()
 
 Return<uint64_t> BiometricsFingerprint::setNotify(
         const sp<V2_1::IBiometricsFingerprintClientCallback>& clientCallback) {
-    mClientCallback = std::move(clientCallback);
+    auto castResult = V2_2::IBiometricsFingerprintClientCallback::castFrom(clientCallback, true);
+    if (!castResult.isOk()) {
+        return ::android::hardware::details::StatusOf<
+                sp<V2_2::IBiometricsFingerprintClientCallback>, uint64_t>(castResult);
+    }
+    mClientCallback = clientCallback;
+    mClientCallbackV2_2 = castResult;
     return mOplusBiometricsFingerprint->setNotify(this);
 }
 
@@ -134,8 +140,15 @@ Return<void> BiometricsFingerprint::onEnumerate(uint64_t deviceId, uint32_t fing
 Return<void> BiometricsFingerprint::onAcquired_2_2(uint64_t deviceId,
                                                    FingerprintAcquiredInfo acquiredInfo,
                                                    int32_t vendorCode) {
-    return reinterpret_cast<V2_2::IBiometricsFingerprintClientCallback*>(mClientCallback.get())
-            ->onAcquired_2_2(deviceId, acquiredInfo, vendorCode);
+    if (mClientCallbackV2_2 != nullptr) {
+        return mClientCallbackV2_2->onAcquired_2_2(deviceId, acquiredInfo, vendorCode);
+    }
+    // START is latency instrumentation added in 2.2, with no 2.1 equivalent.
+    if (mClientCallback != nullptr && acquiredInfo != FingerprintAcquiredInfo::START) {
+        return mClientCallback->onAcquired(
+                deviceId, static_cast<V2_1::FingerprintAcquiredInfo>(acquiredInfo), vendorCode);
+    }
+    return Void();
 }
 
 Return<void> BiometricsFingerprint::onEngineeringInfoUpdated(

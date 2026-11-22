@@ -130,6 +130,7 @@ class BiometricsFingerprint : public IBiometricsFingerprint,
 
     sp<IOplusBiometricsFingerprint> mOplusBiometricsFingerprint;
     sp<V2_1::IBiometricsFingerprintClientCallback> mClientCallback;
+    sp<V2_2::IBiometricsFingerprintClientCallback> mClientCallbackV2_2;
 
     int mOplusDisplayFd;
 };
