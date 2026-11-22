@@ -40,24 +40,11 @@ internal fun BandModeSelector(
         )
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
+            EqualizerSectionHeader(
+                icon = Icons.Default.Tune,
+                title = stringResource(R.string.band_configuration),
                 modifier = Modifier.padding(bottom = 12.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Tune,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = stringResource(R.string.band_configuration),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
+            )
             
             Text(
                 text = stringResource(R.string.choose_equalizer_precision),
