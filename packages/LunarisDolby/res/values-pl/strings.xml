@@ -192,5 +192,26 @@
     <string name="dolby_autoeq_search">Szukaj</string>
     <string name="dolby_autoeq_active">Aktywny profil</string>
     <string name="dolby_autoeq_selected">Wybrany profil</string>
+
+    <!-- Active audio output card -->
+    <string name="dolby_summary">Poczuj przestrzenny dźwięk</string>
+    <string name="audio_output_active_device">Aktywne wyjście audio</string>
+    <string name="audio_output_speaker">Głośnik</string>
+    <string name="audio_output_wired">Słuchawki przewodowe</string>
+    <string name="audio_output_bluetooth">Bluetooth</string>
+    <string name="audio_output_usb">Dźwięk USB</string>
+    <string name="audio_output_unknown">Urządzenie audio</string>
+
+    <!-- Equalizer section headers & band tuner -->
+    <string name="dolby_geq_view">Widok korektora</string>
+    <string name="band_tuner">Stroik pasm</string>
+    <string name="band_tuner_desc">Przechodź między pasmami i dostrajaj wzmocnienie w krokach co 0,1 dB</string>
+    <string name="band_tuner_position">Pasmo %1$d z %2$d</string>
+    <string name="band_tuner_label">Pasmo %1$d · %2$s</string>
+    <string name="band_tuner_previous">Poprzednie pasmo</string>
+    <string name="band_tuner_next">Następne pasmo</string>
+    <string name="band_tuner_decrement">−0,1 dB</string>
+    <string name="band_tuner_reset">0 dB</string>
+    <string name="band_tuner_increment">+0,1 dB</string>
 </resources>
 
