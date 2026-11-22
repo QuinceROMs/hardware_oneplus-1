@@ -21,7 +21,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -161,27 +160,6 @@ fun ModernEqualizerScreen(
                 }
             }
         }
-            
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .height(130.dp)
-                    .background(
-                        brush = Brush.verticalGradient(
-                            colors = listOf(
-                                Color.Transparent,
-                                MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.95f)
-                            )
-                        )
-                    )
-            )
-            
-            DolbyBottomNav(
-                navController = navController,
-                contentPadding = paddingValues,
-                modifier = Modifier.align(Alignment.BottomCenter)
-            )
         }
     }
 
