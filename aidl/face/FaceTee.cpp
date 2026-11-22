@@ -54,6 +54,7 @@ constexpr size_t kHeaderSize = 64;
 
 // Responses follow the request payload, both are 64 byte aligned.
 constexpr size_t requestSize(size_t payload) {
+    if (payload > kSharedBufferSize - sizeof(Request) - kHeaderSize) return 0;
     return (payload + sizeof(Request) + kHeaderSize) & ~(kHeaderSize - 1);
 }
 
@@ -114,6 +115,12 @@ bool FaceTee::open() {
 }
 
 uint32_t FaceTee::send(QSEECom_handle* handle, size_t reqSize, size_t rspSize) {
+    if (!handle || !handle->ion_sbuffer || reqSize > kSharedBufferSize ||
+        rspSize < sizeof(Response) || rspSize > kSharedBufferSize - reqSize) {
+        LOG(ERROR) << "Invalid QSEECom command buffer";
+        return static_cast<uint32_t>(-1);
+    }
+
     uint8_t* buf = handle->ion_sbuffer;
     auto* rsp = reinterpret_cast<Response*>(buf + reqSize);
     rsp->result = 9;
@@ -124,12 +131,16 @@ uint32_t FaceTee::send(QSEECom_handle* handle, size_t reqSize, size_t rspSize) {
         LOG(ERROR) << "Command " << cmd << " failed to send: " << ret;
         return ret;
     }
-    // Remove commands return non-zero when the slot is empty, which callers treat as benign.
+    // The trusted app uses the same error for an empty slot and other removal failures.
     if (rsp->result != 0) LOG(DEBUG) << "Command " << cmd << " returned " << rsp->result;
     return rsp->result;
 }
 
 bool FaceTee::saveFeature(const uint8_t* feature, size_t size) {
+    const size_t reqSize = requestSize(size);
+    if (!feature || size == 0 || reqSize == 0 || reqSize > kSharedBufferSize - kHeaderSize) {
+        return false;
+    }
     if (!open()) return false;
 
     auto* req = reinterpret_cast<Request*>(mFeatureHandle->ion_sbuffer);
@@ -138,7 +149,7 @@ bool FaceTee::saveFeature(const uint8_t* feature, size_t size) {
     req->cmd = SAVE_FEATURE;
     req->size = size;
     memcpy(req->data, feature, size);
-    return send(mFeatureHandle, requestSize(size), kHeaderSize) == 0;
+    return send(mFeatureHandle, reqSize, kHeaderSize) == 0;
 }
 
 bool FaceTee::removeFeature() {
@@ -152,6 +163,10 @@ bool FaceTee::removeFeature() {
 }
 
 std::optional<float> FaceTee::compare(const uint8_t* feature, size_t size) {
+    const size_t reqSize = requestSize(size);
+    if (!feature || size == 0 || reqSize == 0 || reqSize > kSharedBufferSize - kHeaderSize) {
+        return std::nullopt;
+    }
     if (!open()) return std::nullopt;
 
     auto* req = reinterpret_cast<Request*>(mFeatureHandle->ion_sbuffer);
@@ -162,12 +177,12 @@ std::optional<float> FaceTee::compare(const uint8_t* feature, size_t size) {
     memcpy(req->thresholds, kThresholds, sizeof(kThresholds));
     memcpy(req->data, feature, size);
 
-    size_t reqSize = requestSize(size);
     if (send(mFeatureHandle, reqSize, kHeaderSize) != 0) return std::nullopt;
     return reinterpret_cast<Response*>(mFeatureHandle->ion_sbuffer + reqSize)->score;
 }
 
 bool FaceTee::saveFrame(int index, const uint8_t* nv21) {
+    if (index < 0 || index >= kMaxFrames || !nv21) return false;
     if (!open()) return false;
 
     auto* req = reinterpret_cast<Request*>(mFrameHandle->ion_sbuffer);
@@ -181,6 +196,7 @@ bool FaceTee::saveFrame(int index, const uint8_t* nv21) {
 }
 
 bool FaceTee::removeFrame(int index) {
+    if (index < 0 || index >= kMaxFrames) return false;
     if (!open()) return false;
 
     auto* req = reinterpret_cast<Request*>(mFrameHandle->ion_sbuffer);

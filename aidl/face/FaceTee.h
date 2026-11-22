@@ -12,8 +12,8 @@
 namespace aidl::android::hardware::biometrics::face {
 
 // Client of the faceapp trusted app, which stores one face feature and compares against it.
-// The stock service keeps the feature and the frames on two separate QSEECom sessions; the trusted
-// app rejects commands that are issued on the wrong session, so both are mirrored here.
+// The stock service keeps the feature and the frames on two separate QSEECom sessions, mirrored
+// here.
 class FaceTee {
   public:
     static constexpr int kFrameWidth = 640;

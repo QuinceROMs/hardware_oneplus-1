@@ -110,7 +110,7 @@ class Session : public BnSession {
     bool checkLockoutLocked();
 
     // Template storage, backed by the TEE or /data depending on the useTee property.
-    bool storeFeature(const std::vector<uint8_t>& feature, const std::vector<uint8_t>& nv21);
+    bool storeFeature(const std::vector<uint8_t>& feature);
     bool removeFeature();
     std::optional<float> matchFeature(const std::vector<uint8_t>& probe);
 
