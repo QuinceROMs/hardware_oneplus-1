@@ -23,8 +23,7 @@ import org.lunaris.dolby.service.DolbyEffectService
 
 class DolbyTileService : TileService() {
 
-    private val repositoryLazy = lazy { DolbyRepository(applicationContext) }
-    private val repository by repositoryLazy
+    private val repository by lazy { DolbyRepository.getInstance(applicationContext) }
     private val halScope = CoroutineScope(SupervisorJob() + DolbyDispatchers.hal)
     private val prefs by lazy { getSharedPreferences("dolby_prefs", Context.MODE_PRIVATE) }
     private val prefChangeListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
@@ -61,7 +60,6 @@ class DolbyTileService : TileService() {
     override fun onDestroy() {
         super.onDestroy()
         halScope.cancel()
-        if (repositoryLazy.isInitialized()) repository.close()
     }
 
     private fun updateTile() {

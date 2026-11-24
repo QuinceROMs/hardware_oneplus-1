@@ -12,11 +12,11 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 /**
  * Dispatchers backing DolbyRepository access.
  *
- * Every DolbyAudioEffect handle attaches to the shared global output session, and
- * checkEffect() can release and recreate that handle in place. Concurrent callers
- * would race the swap, so all repository reads and writes run on a single
- * serialized worker. This keeps the existing serialization the UI thread provided
- * while moving the binder round-trips off it.
+ * The repository's DolbyAudioEffect handle attaches to the shared global output
+ * session, and requireEffect() can release and recreate that handle in place.
+ * Concurrent callers would race the swap, so all repository reads and writes run
+ * on a single serialized worker. This keeps the existing serialization the UI
+ * thread provided while moving the binder round-trips off it.
  */
 object DolbyDispatchers {
     @OptIn(ExperimentalCoroutinesApi::class)

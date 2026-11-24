@@ -70,7 +70,7 @@ class DolbyEffectService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        repository = DolbyRepository(this)
+        repository = DolbyRepository.getInstance(this)
         deviceStateManager = DeviceStateManager(this)
         val currentDevice = getCurrentOutputDevice()
         previousActiveDevice = currentDevice
@@ -175,7 +175,6 @@ class DolbyEffectService : Service() {
         audioManager.unregisterAudioDeviceCallback(audioDeviceCallback)
         audioManager.unregisterAudioPlaybackCallback(playbackCallback)
         handler.removeCallbacksAndMessages(null)
-        repository.close()
         Log.d(TAG, "Dolby effect service destroyed")
     }
 

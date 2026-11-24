@@ -20,7 +20,7 @@ import kotlinx.coroutines.withContext
 
 class DolbyViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val repository = DolbyRepository(application)
+    private val repository = DolbyRepository.getInstance(application)
 
     private val _uiState = MutableStateFlow<DolbyUiState>(DolbyUiState.Loading)
     val uiState: StateFlow<DolbyUiState> = _uiState.asStateFlow()
@@ -201,7 +201,6 @@ class DolbyViewModel(application: Application) : AndroidViewModel(application) {
         audioOutputStateJob = null
         profileChangeJob?.cancel()
         profileChangeJob = null
-        repository.close()
         super.onCleared()
     }
     

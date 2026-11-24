@@ -23,7 +23,7 @@ class DolbyNotificationListener : NotificationListenerService() {
     override fun onCreate() {
         super.onCreate()
         DolbyConstants.dlog(TAG, "NotificationListener created")
-        dolbyRepository = DolbyRepository(this)
+        dolbyRepository = DolbyRepository.getInstance(this)
         initializeDolbySettings()
         startAppProfileMonitoringIfEnabled()
     }
@@ -70,7 +70,6 @@ class DolbyNotificationListener : NotificationListenerService() {
     override fun onDestroy() {
         super.onDestroy()
         halScope.cancel()
-        dolbyRepository.close()
         DolbyConstants.dlog(TAG, "NotificationListener destroyed")
     }
 

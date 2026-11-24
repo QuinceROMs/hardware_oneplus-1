@@ -24,7 +24,7 @@ import kotlinx.coroutines.withContext
 
 class EqualizerViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val repository = DolbyRepository(application)
+    private val repository = DolbyRepository.getInstance(application)
     private val context = application
 
     private val prefs: SharedPreferences = application.getSharedPreferences("autoeq_prefs", Context.MODE_PRIVATE)
@@ -500,7 +500,6 @@ class EqualizerViewModel(application: Application) : AndroidViewModel(applicatio
         DolbyConstants.dlog(TAG, "ViewModel onCleared")
         profileChangeJob?.cancel()
         profileChangeJob = null
-        repository.close()
         super.onCleared()
     }
     

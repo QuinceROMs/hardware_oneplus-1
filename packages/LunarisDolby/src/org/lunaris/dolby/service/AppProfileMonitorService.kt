@@ -58,7 +58,7 @@ class AppProfileMonitorService : Service() {
     override fun onCreate() {
         super.onCreate()
         appProfileManager = AppProfileManager(this)
-        dolbyRepository = DolbyRepository(this)
+        dolbyRepository = DolbyRepository.getInstance(this)
         audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
     }
 
@@ -124,8 +124,8 @@ class AppProfileMonitorService : Service() {
             
             if (hasOriginalProfile && originalProfile >= 0) {
                 DolbyConstants.dlog(TAG, "Restoring original profile: $originalProfile")
-                // Restore on the serial HAL worker so it runs after any in-flight app-switch
-                // and finishes before onDestroy's close(); this teardown path is infrequent.
+                // Restore on the serial HAL worker so it runs after any in-flight app-switch;
+                // this teardown path is infrequent.
                 runBlocking(DolbyDispatchers.hal) {
                     dolbyRepository.setCurrentProfile(originalProfile)
                 }
@@ -285,7 +285,6 @@ class AppProfileMonitorService : Service() {
         DolbyConstants.dlog(TAG, "Service destroyed")
         stopMonitoring()
         halScope.cancel()
-        dolbyRepository.close()
         hasOriginalProfile = false
     }
 
