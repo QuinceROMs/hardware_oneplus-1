@@ -144,13 +144,16 @@ Session::Session(std::shared_ptr<Hardware> hw, int32_t userId, std::shared_ptr<I
     : mHw(std::move(hw)), mUserId(userId), mCb(std::move(cb)), mWorker(16) {}
 
 std::shared_ptr<common::ICancellationSignal> Session::schedule(
-        std::function<void(const std::future<void>&)> op) {
+        std::optional<Error> queueFullError, std::function<void(const std::future<void>&)> op) {
     std::promise<void> promise;
     std::future<void> future = promise.get_future();
-    mWorker.schedule(Callable::from([this, op = std::move(op), future = std::move(future)] {
-        std::lock_guard lock(mHw->lock);
-        op(future);
-    }));
+    if (!mWorker.schedule(Callable::from([this, op = std::move(op), future = std::move(future)] {
+            std::lock_guard lock(mHw->lock);
+            op(future);
+        }))) {
+        LOG(ERROR) << "Operation queue is full, dropping the operation";
+        if (queueFullError) mCb->onError(*queueFullError, 0);
+    }
     return ndk::SharedRefBase::make<CancellationSignal>(std::move(promise));
 }
 
@@ -251,7 +254,7 @@ ndk::ScopedAStatus Session::enroll(const keymaster::HardwareAuthToken& hat, Enro
 std::shared_ptr<common::ICancellationSignal> Session::scheduleEnroll(
         const keymaster::HardwareAuthToken& hat, ANativeWindow* preview) {
     auto window = std::make_shared<NativeWindow>(preview);
-    return schedule([this, hat, window](const std::future<void>& cancel) {
+    return schedule(Error::UNABLE_TO_PROCESS, [this, hat, window](const std::future<void>& cancel) {
         doEnroll(hat, window->get(), cancel);
     });
 }
@@ -376,7 +379,8 @@ void Session::doEnroll(const keymaster::HardwareAuthToken& hat, ANativeWindow* p
 
 ndk::ScopedAStatus Session::authenticate(int64_t,
                                          std::shared_ptr<common::ICancellationSignal>* return_val) {
-    *return_val = schedule([this](const std::future<void>& cancel) { doAuthenticate(cancel); });
+    *return_val = schedule(Error::UNABLE_TO_PROCESS,
+                           [this](const std::future<void>& cancel) { doAuthenticate(cancel); });
     return ndk::ScopedAStatus::ok();
 }
 
@@ -639,13 +643,14 @@ void Session::doAuthenticateAuth(const Enrollment& enrollment, const std::future
 
 ndk::ScopedAStatus Session::detectInteraction(
         std::shared_ptr<common::ICancellationSignal>* return_val) {
-    *return_val = schedule(
-            [this](const std::future<void>&) { mCb->onError(Error::UNABLE_TO_PROCESS, 0); });
+    *return_val = schedule(Error::UNABLE_TO_PROCESS, [this](const std::future<void>&) {
+        mCb->onError(Error::UNABLE_TO_PROCESS, 0);
+    });
     return ndk::ScopedAStatus::ok();
 }
 
 ndk::ScopedAStatus Session::enumerateEnrollments() {
-    schedule([this](const std::future<void>&) {
+    schedule(std::nullopt, [this](const std::future<void>&) {
         Enrollment enrollment = Enrollment::load();
         if (enrollment.userId == mUserId) {
             mCb->onEnrollmentsEnumerated({enrollment.enrollmentId});
@@ -657,7 +662,7 @@ ndk::ScopedAStatus Session::enumerateEnrollments() {
 }
 
 ndk::ScopedAStatus Session::removeEnrollments(const std::vector<int32_t>& enrollmentIds) {
-    schedule([this, enrollmentIds](const std::future<void>&) {
+    schedule(Error::UNABLE_TO_REMOVE, [this, enrollmentIds](const std::future<void>&) {
         Enrollment enrollment = Enrollment::load();
         if (enrollment.userId != mUserId ||
             std::find(enrollmentIds.begin(), enrollmentIds.end(), enrollment.enrollmentId) ==
@@ -681,7 +686,7 @@ ndk::ScopedAStatus Session::removeEnrollments(const std::vector<int32_t>& enroll
 }
 
 ndk::ScopedAStatus Session::getFeatures() {
-    schedule([this](const std::future<void>&) {
+    schedule(Error::UNABLE_TO_PROCESS, [this](const std::future<void>&) {
         Enrollment enrollment = Enrollment::load();
         if (enrollment.userId != mUserId) {
             mCb->onError(Error::UNABLE_TO_PROCESS, 0);
@@ -696,7 +701,7 @@ ndk::ScopedAStatus Session::getFeatures() {
 
 ndk::ScopedAStatus Session::setFeature(const keymaster::HardwareAuthToken&, Feature feature,
                                        bool enabled) {
-    schedule([this, feature, enabled](const std::future<void>&) {
+    schedule(Error::UNABLE_TO_PROCESS, [this, feature, enabled](const std::future<void>&) {
         Enrollment enrollment = Enrollment::load();
         if (enrollment.userId != mUserId || feature != Feature::REQUIRE_ATTENTION) {
             mCb->onError(Error::UNABLE_TO_PROCESS, 0);
@@ -713,17 +718,19 @@ ndk::ScopedAStatus Session::setFeature(const keymaster::HardwareAuthToken&, Feat
 }
 
 ndk::ScopedAStatus Session::getAuthenticatorId() {
-    schedule([this](const std::future<void>&) { mCb->onAuthenticatorIdRetrieved(0); });
+    schedule(std::nullopt,
+             [this](const std::future<void>&) { mCb->onAuthenticatorIdRetrieved(0); });
     return ndk::ScopedAStatus::ok();
 }
 
 ndk::ScopedAStatus Session::invalidateAuthenticatorId() {
-    schedule([this](const std::future<void>&) { mCb->onAuthenticatorIdInvalidated(0); });
+    schedule(Error::UNABLE_TO_PROCESS,
+             [this](const std::future<void>&) { mCb->onAuthenticatorIdInvalidated(0); });
     return ndk::ScopedAStatus::ok();
 }
 
 ndk::ScopedAStatus Session::resetLockout(const keymaster::HardwareAuthToken&) {
-    schedule([this](const std::future<void>&) {
+    schedule(Error::UNABLE_TO_PROCESS, [this](const std::future<void>&) {
         sLockouts.erase(mUserId);
         mCb->onLockoutCleared();
     });
@@ -733,7 +740,7 @@ ndk::ScopedAStatus Session::resetLockout(const keymaster::HardwareAuthToken&) {
 ndk::ScopedAStatus Session::close() {
     // The framework closes the session once it gives up waiting for a cancellation, and routes any
     // later callback of that operation to its current client, which may belong to the next session.
-    schedule([this](const std::future<void>&) { mCb->onSessionClosed(); });
+    schedule(std::nullopt, [this](const std::future<void>&) { mCb->onSessionClosed(); });
     return ndk::ScopedAStatus::ok();
 }
 

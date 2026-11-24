@@ -93,8 +93,10 @@ class Session : public BnSession {
             std::shared_ptr<common::ICancellationSignal>* return_val) override;
 
   private:
+    // queueFullError is reported if the operation cannot be queued. It is empty for operations
+    // whose callbacks have no error, as ISessionCallback#onError is only defined for some of them.
     std::shared_ptr<common::ICancellationSignal> schedule(
-            std::function<void(const std::future<void>&)> op);
+            std::optional<Error> queueFullError, std::function<void(const std::future<void>&)> op);
 
     std::shared_ptr<common::ICancellationSignal> scheduleEnroll(
             const keymaster::HardwareAuthToken& hat, ANativeWindow* preview);
