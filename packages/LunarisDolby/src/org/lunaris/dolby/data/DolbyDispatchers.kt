@@ -6,8 +6,10 @@
 package org.lunaris.dolby.data
 
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
 
 /**
  * Dispatchers backing DolbyRepository access.
@@ -21,4 +23,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 object DolbyDispatchers {
     @OptIn(ExperimentalCoroutinesApi::class)
     val hal: CoroutineDispatcher = Dispatchers.IO.limitedParallelism(1)
+
+    /** For work on [hal] that must not be lost when the component that started it goes away. */
+    val processScope = CoroutineScope(SupervisorJob() + hal)
 }

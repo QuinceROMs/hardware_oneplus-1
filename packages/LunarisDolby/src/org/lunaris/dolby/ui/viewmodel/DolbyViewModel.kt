@@ -106,11 +106,7 @@ class DolbyViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             try {
                 withContext(DolbyDispatchers.hal) { repository.setDolbyEnabled(enabled) }
-                if (enabled) {
-                    DolbyEffectService.start(getApplication())
-                } else {
-                    DolbyEffectService.stop(getApplication())
-                }
+                DolbyEffectService.update(getApplication())
                 loadSettings()
             } catch (e: Exception) {
                 DolbyConstants.dlog(TAG, "Error setting Dolby enabled: ${e.message}")

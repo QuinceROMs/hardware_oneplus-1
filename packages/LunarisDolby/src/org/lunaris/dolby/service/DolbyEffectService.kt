@@ -188,14 +188,47 @@ class DolbyEffectService : Service() {
             .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
             .build()
 
-        fun start(context: Context) {
-            val intent = Intent(context, DolbyEffectService::class.java)
-            context.startService(intent)
+        private fun shouldRun(context: Context): Boolean {
+            val prefs = context.getSharedPreferences("dolby_prefs", Context.MODE_PRIVATE)
+            return prefs.getBoolean(DolbyConstants.PREF_ENABLE, false) ||
+                prefs.getBoolean(DolbyConstants.PREF_DEVICE_STATE_MEMORY, false)
         }
 
-        fun stop(context: Context) {
+        /**
+         * Runs the service while Dolby or the device state memory is on. The memory needs it even
+         * while Dolby is off, because a snapshot also restores the enabled state. Otherwise the
+         * service is stopped and the saved state is pushed once, which turns DAP off at boot.
+         * Call after changing either preference.
+         */
+        fun update(context: Context) {
             val intent = Intent(context, DolbyEffectService::class.java)
-            context.stopService(intent)
+            if (shouldRun(context)) {
+                context.startService(intent)
+            } else {
+                context.stopService(intent)
+                val repository = DolbyRepository.getInstance(context)
+                DolbyDispatchers.processScope.launch { repository.applySavedState() }
+            }
+        }
+
+        /**
+         * Call after changing PREF_DEVICE_STATE_MEMORY. Turning the memory on stores the current
+         * state for the current output first, so that the service starting up does not restore
+         * an older snapshot of that output over it.
+         */
+        fun onDeviceStateMemoryChanged(context: Context) {
+            val prefs = context.getSharedPreferences("dolby_prefs", Context.MODE_PRIVATE)
+            if (prefs.getBoolean(DolbyConstants.PREF_DEVICE_STATE_MEMORY, false)) {
+                val repository = DolbyRepository.getInstance(context)
+                val deviceStateManager = DeviceStateManager(context.applicationContext)
+                repository.getCurrentOutputDevice()?.let { device ->
+                    val key = deviceStateManager.deviceKey(device)
+                    DolbyDispatchers.processScope.launch {
+                        deviceStateManager.saveSnapshot(key, repository)
+                    }
+                }
+            }
+            update(context)
         }
     }
 }

@@ -48,11 +48,7 @@ class DolbyTileService : TileService() {
         halScope.launch {
             val newState = !repository.getDolbyEnabled()
             repository.setDolbyEnabled(newState)
-            if (newState) {
-                DolbyEffectService.start(applicationContext)
-            } else {
-                DolbyEffectService.stop(applicationContext)
-            }
+            DolbyEffectService.update(applicationContext)
         }
         updateTile()
     }

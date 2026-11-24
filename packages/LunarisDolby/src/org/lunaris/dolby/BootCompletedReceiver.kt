@@ -20,24 +20,22 @@ class BootCompletedReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         Log.d(TAG, "Received intent: ${intent.action}")
-        when (intent.action) {
-            Intent.ACTION_LOCKED_BOOT_COMPLETED,
-            Intent.ACTION_BOOT_COMPLETED -> {
-                try {
-                    DolbyEffectService.start(context)
-                    
-                    val prefs = context.getSharedPreferences("dolby_prefs", Context.MODE_PRIVATE)
-                    if (prefs.getBoolean("app_profile_monitoring_enabled", false)) {
-                        AppProfileMonitorService.startMonitoring(context)
-                    }
-                    
-                    if (isNotificationListenerEnabled(context)) {
-                        requestNotificationListenerRebind(context)
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to initialize Dolby", e)
-                }
+        // The app is direct boot aware and keeps its preferences in device protected storage, so
+        // they can be read before the user unlocks.
+        if (intent.action != Intent.ACTION_LOCKED_BOOT_COMPLETED) return
+        try {
+            DolbyEffectService.update(context)
+
+            val prefs = context.getSharedPreferences("dolby_prefs", Context.MODE_PRIVATE)
+            if (prefs.getBoolean("app_profile_monitoring_enabled", false)) {
+                AppProfileMonitorService.startMonitoring(context)
             }
+
+            if (isNotificationListenerEnabled(context)) {
+                requestNotificationListenerRebind(context)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to initialize Dolby", e)
         }
     }
 
