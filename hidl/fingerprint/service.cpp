@@ -28,7 +28,11 @@ using android::hardware::biometrics::fingerprint::V2_3::IBiometricsFingerprint;
 using android::hardware::biometrics::fingerprint::V2_3::implementation::BiometricsFingerprint;
 
 int main() {
-    sp<IBiometricsFingerprint> bio = new BiometricsFingerprint();
+    sp<BiometricsFingerprint> impl = new BiometricsFingerprint();
+    if (!impl->init()) {
+        return 1;
+    }
+    sp<IBiometricsFingerprint> bio = impl;
 
     configureRpcThreadpool(1, true /*callerWillJoin*/);
 

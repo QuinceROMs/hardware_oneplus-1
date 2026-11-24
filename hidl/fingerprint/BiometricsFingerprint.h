@@ -58,6 +58,10 @@ class BiometricsFingerprint : public IBiometricsFingerprint,
   public:
     BiometricsFingerprint();
 
+    // Connects to the Oplus HAL. Must be called while a strong reference is held, since it passes
+    // this object to the Oplus HAL.
+    bool init();
+
     // Methods from ::android::hardware::biometrics::fingerprint::V2_1::IBiometricsFingerprint
     // follow.
     Return<uint64_t> setNotify(

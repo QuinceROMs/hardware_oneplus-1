@@ -32,8 +32,22 @@ BiometricsFingerprint::BiometricsFingerprint()
     if (mOplusDisplayFd < 0) {
         PLOG(WARNING) << "Failed to open /dev/oplus_display";
     }
+}
+
+bool BiometricsFingerprint::init() {
     mOplusBiometricsFingerprint = IOplusBiometricsFingerprint::getService();
-    mOplusBiometricsFingerprint->setHalCallback(this);
+    if (mOplusBiometricsFingerprint == nullptr) {
+        LOG(ERROR) << "Oplus fingerprint HAL is not available";
+        return false;
+    }
+
+    auto ret = mOplusBiometricsFingerprint->setHalCallback(this);
+    if (!ret.isOk()) {
+        LOG(ERROR) << "Failed to set the Oplus HAL callback: " << ret.description();
+        return false;
+    }
+
+    return true;
 }
 
 Return<uint64_t> BiometricsFingerprint::setNotify(
