@@ -72,7 +72,9 @@ ndk::ScopedAStatus DisplayModes::setDisplayMode(int32_t modeID, bool makeDefault
     if (mOplusDisplayFd >= 0) {
         ioctl(mOplusDisplayFd, PANEL_IOCTL_SET_SEED, &iter->second.seedMode);
     }
-    mController->setActiveDisplayMode(iter->second.displayModeId);
+    if (mController->setActiveDisplayMode(iter->second.displayModeId) != android::OK) {
+        LOG(ERROR) << "Failed to set SDM display mode " << iter->second.displayModeId;
+    }
     mCurrentModeId = iter->first;
     if (makeDefault) {
         std::ofstream defaultFile(kDefaultPath);
