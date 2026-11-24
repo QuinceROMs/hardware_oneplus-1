@@ -18,6 +18,8 @@
 
 #include "BiometricsFingerprint.h"
 
+#include <android-base/logging.h>
+
 namespace android {
 namespace hardware {
 namespace biometrics {
@@ -26,7 +28,10 @@ namespace V2_3 {
 namespace implementation {
 
 BiometricsFingerprint::BiometricsFingerprint()
-    : mOplusDisplayFd(open("/dev/oplus_display", O_RDWR)) {
+    : mOplusDisplayFd(open("/dev/oplus_display", O_RDWR | O_CLOEXEC)) {
+    if (mOplusDisplayFd < 0) {
+        PLOG(WARNING) << "Failed to open /dev/oplus_display";
+    }
     mOplusBiometricsFingerprint = IOplusBiometricsFingerprint::getService();
     mOplusBiometricsFingerprint->setHalCallback(this);
 }
