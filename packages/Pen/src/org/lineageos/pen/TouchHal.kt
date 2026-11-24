@@ -100,7 +100,10 @@ class TouchHal(private val onCommand: (String) -> Unit) {
 
     fun writeBtInfo(info: String) {
         try {
-            getService()?.touchWriteBtInfo(0, PenProtocol.NODE_BT_INFO, info)
+            val ret = getService()?.touchWriteBtInfo(0, PenProtocol.NODE_BT_INFO, info) ?: return
+            if (ret < 0) {
+                Log.e(TAG, "touchWriteBtInfo returned $ret")
+            }
         } catch (e: RemoteException) {
             Log.e(TAG, "touchWriteBtInfo failed", e)
         }
@@ -108,7 +111,10 @@ class TouchHal(private val onCommand: (String) -> Unit) {
 
     fun writeNode(nodeFlag: Int, value: String) {
         try {
-            getService()?.touchWriteNodeFile(0, nodeFlag, value)
+            val ret = getService()?.touchWriteNodeFile(0, nodeFlag, value) ?: return
+            if (ret < 0) {
+                Log.e(TAG, "touchWriteNodeFile($nodeFlag) returned $ret")
+            }
         } catch (e: RemoteException) {
             Log.e(TAG, "touchWriteNodeFile($nodeFlag) failed", e)
         }
