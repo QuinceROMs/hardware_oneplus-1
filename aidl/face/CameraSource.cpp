@@ -255,14 +255,15 @@ bool CameraSource::nextFrame(std::vector<uint8_t>* nv21,
                              std::chrono::steady_clock::time_point deadline,
                              const std::function<bool()>& shouldStop) {
     std::unique_lock lock(mMutex);
-    while (!mFrameAvailable && !mFailed) {
+    // A frame is usually pending by the time the caller is done with the previous one, so the
+    // stop conditions must hold even when there is nothing to wait for.
+    while (true) {
+        auto now = std::chrono::steady_clock::now();
+        if (mFailed || shouldStop() || now >= deadline) return false;
+        if (mFrameAvailable) break;
         // Wake up periodically to check shouldStop.
-        auto wakeup = std::min(deadline,
-                               std::chrono::steady_clock::now() + std::chrono::milliseconds(50));
-        mCond.wait_until(lock, wakeup);
-        if (shouldStop() || std::chrono::steady_clock::now() >= deadline) return false;
+        mCond.wait_until(lock, std::min(deadline, now + std::chrono::milliseconds(50)));
     }
-    if (mFailed) return false;
 
     mFrameAvailable = false;
     *nv21 = std::move(mFrame);
