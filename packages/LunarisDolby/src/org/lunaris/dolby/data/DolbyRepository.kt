@@ -93,6 +93,14 @@ class DolbyRepository private constructor(private val context: Context) {
         }
     }
 
+    fun isEffectAvailable(): Boolean =
+        try {
+            requireEffect()
+            true
+        } catch (e: Exception) {
+            false
+        }
+
     private fun readSavedProfile(): Int? {
         return defaultPrefs.getString(DolbyConstants.PREF_PROFILE, null)
             ?.toIntOrNull()
@@ -235,7 +243,7 @@ class DolbyRepository private constructor(private val context: Context) {
             requireEffect().profile
         } catch (e: Exception) {
             DolbyConstants.dlog(TAG, "Error getting current profile: ${e.message}")
-            0
+            readSavedProfile() ?: 0
         }
     }
 

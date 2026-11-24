@@ -35,6 +35,11 @@ class DeviceStateManager(private val context: Context) {
     }
 
     fun saveSnapshot(deviceKey: String, repository: DolbyRepository) {
+        // Without the effect the getters return defaults, which would replace the stored state.
+        if (!repository.isEffectAvailable()) {
+            DolbyConstants.dlog(TAG, "Effect unavailable, not saving snapshot for device=$deviceKey")
+            return
+        }
         val profile = repository.getCurrentProfile()
         val prefs = getDevicePrefs(deviceKey)
         val editor = prefs.edit()
@@ -91,6 +96,12 @@ class DeviceStateManager(private val context: Context) {
             DolbyConstants.dlog(TAG,
                 "Snapshot version mismatch for $deviceKey: stored=$storedVersion current=$SNAPSHOT_VERSION — discarding")
             clearSnapshot(deviceKey)
+            return false
+        }
+
+        // Without the effect the setters below throw, and the catch would discard the snapshot.
+        if (!repository.isEffectAvailable()) {
+            DolbyConstants.dlog(TAG, "Effect unavailable, not restoring snapshot for device=$deviceKey")
             return false
         }
 
