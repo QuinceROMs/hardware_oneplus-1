@@ -90,6 +90,11 @@ struct Command {
 };
 static_assert(sizeof(Command) == 32);
 
+// The driver rejects a response buffer outside the shared buffer, and QSEEComAPI.h asks for
+// QSEECOM_BUFFER_ALIGN (64 byte) alignment, so the status follows the command on its own line.
+constexpr size_t kStatusOffset = 64;
+static_assert(sizeof(Command) <= kStatusOffset);
+
 int (*sStartApp)(QSEECom_handle**, const char*, const char*, uint32_t);
 int (*sShutdownApp)(QSEECom_handle**);
 int (*sSendModifiedCmd)(QSEECom_handle*, void*, uint32_t, void*, uint32_t, QSEECom_ion_fd_info*);
@@ -202,14 +207,15 @@ int AuthTee::communicate(void* send, int sendLen, void* rsp, int rspLen) {
     ifd.data[0] = {request.fd(), offsetof(Command, request)};
     ifd.data[1] = {response.fd(), offsetof(Command, response)};
 
-    int32_t status = 0;
-    if (int ret = sSendModifiedCmd(sHandle, cmd, sizeof(*cmd), &status, sizeof(status), &ifd);
+    auto* status = reinterpret_cast<int32_t*>(sHandle->ion_sbuffer + kStatusOffset);
+    *status = 0;
+    if (int ret = sSendModifiedCmd(sHandle, cmd, sizeof(*cmd), status, sizeof(*status), &ifd);
         ret != 0) {
         LOG(ERROR) << "Failed to send TEE command: " << ret;
         return -1;
     }
     if (rspLen) memcpy(rsp, response.data(), rspLen);
-    return status;
+    return *status;
 }
 
 }  // namespace aidl::android::hardware::biometrics::face
