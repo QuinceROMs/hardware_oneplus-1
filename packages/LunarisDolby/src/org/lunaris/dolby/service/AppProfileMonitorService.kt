@@ -9,13 +9,17 @@ import android.app.Service
 import android.app.usage.UsageEvents
 import android.app.usage.UsageEventsQuery
 import android.app.usage.UsageStatsManager
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.os.Handler
+import android.os.HandlerThread
 import android.os.IBinder
 import android.os.Looper
+import android.os.PowerManager
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
@@ -30,12 +34,16 @@ import java.util.concurrent.atomic.AtomicReference
 
 class AppProfileMonitorService : Service() {
 
-    private val handler = Handler(Looper.getMainLooper())
-    private val switchHandler = Handler(Looper.getMainLooper())
+    private val mainHandler = Handler(Looper.getMainLooper())
     private val halScope = CoroutineScope(SupervisorJob() + DolbyDispatchers.hal)
     private lateinit var appProfileManager: AppProfileManager
     private lateinit var dolbyRepository: DolbyRepository
     private lateinit var audioManager: AudioManager
+    private lateinit var powerManager: PowerManager
+    private lateinit var monitorThread: HandlerThread
+    // The polls, the delayed switches and the screen state receiver run here, so the state
+    // below is only touched on this thread.
+    private lateinit var monitorHandler: Handler
     private val lastPackageName = AtomicReference<String?>(null)
     private var isMonitoring = false
     private var pendingSwitchRunnable: Runnable? = null
@@ -45,7 +53,16 @@ class AppProfileMonitorService : Service() {
         override fun run() {
             checkForegroundApp()
             if (isMonitoring) {
-                handler.postDelayed(this, CHECK_INTERVAL)
+                monitorHandler.postDelayed(this, CHECK_INTERVAL)
+            }
+        }
+    }
+
+    private val screenStateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            when (intent.action) {
+                Intent.ACTION_SCREEN_ON -> resumePolling()
+                Intent.ACTION_SCREEN_OFF -> monitorHandler.removeCallbacks(checkForegroundAppRunnable)
             }
         }
     }
@@ -55,19 +72,22 @@ class AppProfileMonitorService : Service() {
         appProfileManager = AppProfileManager(this)
         dolbyRepository = DolbyRepository.getInstance(this)
         audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        powerManager = getSystemService(PowerManager::class.java)
+        monitorThread = HandlerThread(TAG).apply { start() }
+        monitorHandler = Handler(monitorThread.looper)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            ACTION_START_MONITORING -> startMonitoring()
+            ACTION_START_MONITORING -> monitorHandler.post { startMonitoring() }
             ACTION_STOP_MONITORING -> {
-                stopMonitoring()
+                monitorHandler.post { stopMonitoring() }
                 stopSelf()
             }
             else -> {
                 val prefs = getSharedPreferences("dolby_prefs", Context.MODE_PRIVATE)
                 if (prefs.getBoolean(PREF_MONITORING_ENABLED, false)) {
-                    startMonitoring()
+                    monitorHandler.post { startMonitoring() }
                 } else {
                     stopSelf()
                 }
@@ -79,20 +99,37 @@ class AppProfileMonitorService : Service() {
     private fun startMonitoring() {
         if (!isMonitoring) {
             isMonitoring = true
+            val filter = IntentFilter().apply {
+                addAction(Intent.ACTION_SCREEN_ON)
+                addAction(Intent.ACTION_SCREEN_OFF)
+            }
+            registerReceiver(
+                screenStateReceiver, filter, null, monitorHandler, Context.RECEIVER_NOT_EXPORTED
+            )
+            // Checked after registering, so a screen change from here on reaches the receiver.
+            if (powerManager.isInteractive) {
+                resumePolling()
+            }
             DolbyConstants.dlog(TAG, "Started monitoring foreground app")
-            handler.post(checkForegroundAppRunnable)
         }
+    }
+
+    // Polling pauses while the screen is off. The top activity is paused when the display goes
+    // to sleep and resumed when it wakes up, so the app in front reports ACTIVITY_RESUMED again
+    // and the first polls after this see it.
+    private fun resumePolling() {
+        if (!isMonitoring) return
+        monitorHandler.removeCallbacks(checkForegroundAppRunnable)
+        monitorHandler.post(checkForegroundAppRunnable)
     }
 
     private fun stopMonitoring() {
         if (isMonitoring) {
             isMonitoring = false
-            handler.removeCallbacks(checkForegroundAppRunnable)
-            
-            synchronized(this) {
-                pendingSwitchRunnable?.let { switchHandler.removeCallbacks(it) }
-                pendingSwitchRunnable = null
-            }
+            unregisterReceiver(screenStateReceiver)
+            monitorHandler.removeCallbacks(checkForegroundAppRunnable)
+            pendingSwitchRunnable?.let { monitorHandler.removeCallbacks(it) }
+            pendingSwitchRunnable = null
             
             // Queued behind any app switch already sent to the HAL dispatcher.
             halScope.launch { dolbyRepository.restoreUserProfile() }
@@ -138,45 +175,43 @@ class AppProfileMonitorService : Service() {
             
             DolbyConstants.dlog(TAG, "Foreground app changed: $previousPackage -> $packageName")
             
-            synchronized(this) {
-                pendingSwitchRunnable?.let { switchHandler.removeCallbacks(it) }
-                
-                pendingSwitchRunnable = Runnable {
-                    synchronized(this) {
-                        try {
-                            if (headphoneOnlyMode && !isHeadphoneConnected()) {
-                                DolbyConstants.dlog(TAG, "Headphones disconnected, aborting profile switch")
-                                return@Runnable
-                            }
-                            
-                            val assignedProfile = appProfileManager.getAppProfile(packageName)
-                            val showToasts = prefs.getBoolean("app_profile_show_toasts", true)
-                            
-                            if (assignedProfile >= 0) {
-                                DolbyConstants.dlog(TAG, "Switching to profile $assignedProfile for $packageName")
-                                halScope.launch { dolbyRepository.setAppProfile(assignedProfile) }
-                                
-                                if (showToasts) {
-                                    val profileName = dolbyProfileName(this@AppProfileMonitorService, assignedProfile)
-                                    val appName = getAppName(packageName)
-                                    ToastHelper.showToast(
-                                        this@AppProfileMonitorService,
-                                        "Dolby: $profileName ($appName)"
-                                    )
-                                }
-                            } else {
-                                halScope.launch { dolbyRepository.restoreUserProfile() }
-                            }
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Error switching profile", e)
-                        } finally {
-                            pendingSwitchRunnable = null
-                        }
+            pendingSwitchRunnable?.let { monitorHandler.removeCallbacks(it) }
+            
+            val switchRunnable = Runnable {
+                try {
+                    if (headphoneOnlyMode && !isHeadphoneConnected()) {
+                        DolbyConstants.dlog(TAG, "Headphones disconnected, aborting profile switch")
+                        return@Runnable
                     }
+                    
+                    val assignedProfile = appProfileManager.getAppProfile(packageName)
+                    val showToasts = prefs.getBoolean("app_profile_show_toasts", true)
+                    
+                    if (assignedProfile >= 0) {
+                        DolbyConstants.dlog(TAG, "Switching to profile $assignedProfile for $packageName")
+                        halScope.launch { dolbyRepository.setAppProfile(assignedProfile) }
+                        
+                        if (showToasts) {
+                            val profileName = dolbyProfileName(this@AppProfileMonitorService, assignedProfile)
+                            val appName = getAppName(packageName)
+                            mainHandler.post {
+                                ToastHelper.showToast(
+                                    this@AppProfileMonitorService,
+                                    "Dolby: $profileName ($appName)"
+                                )
+                            }
+                        }
+                    } else {
+                        halScope.launch { dolbyRepository.restoreUserProfile() }
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error switching profile", e)
+                } finally {
+                    pendingSwitchRunnable = null
                 }
-                
-                switchHandler.postDelayed(pendingSwitchRunnable!!, SWITCH_DELAY)
             }
+            pendingSwitchRunnable = switchRunnable
+            monitorHandler.postDelayed(switchRunnable, SWITCH_DELAY)
             
         } catch (e: Exception) {
             Log.e(TAG, "Error checking foreground app", e)
@@ -226,7 +261,9 @@ class AppProfileMonitorService : Service() {
         super.onDestroy()
         DolbyConstants.dlog(TAG, "Service destroyed")
         // halScope is not cancelled, so the restore queued by stopMonitoring() still runs.
-        stopMonitoring()
+        // quitSafely() still delivers messages that are already due, such as this one.
+        monitorHandler.post { stopMonitoring() }
+        monitorThread.quitSafely()
     }
 
     companion object {
