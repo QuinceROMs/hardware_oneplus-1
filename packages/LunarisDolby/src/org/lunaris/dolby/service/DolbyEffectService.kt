@@ -52,15 +52,9 @@ class DolbyEffectService : Service() {
 
         override fun onAudioDevicesRemoved(removedDevices: Array<AudioDeviceInfo>) {
             Log.d(TAG, "Devices removed: ${removedDevices.map { it.debugString() }}")
-            if (isDeviceStateMemoryEnabled) {
-                val keys = removedDevices.map { deviceStateManager.deviceKey(it) }
-                halScope.launch {
-                    keys.forEach { key ->
-                        Log.d(TAG, "Snapshotting state for removed device: $key")
-                        deviceStateManager.saveSnapshot(key, repository)
-                    }
-                }
-            }
+            // handleDeviceChange() snapshots the device that was actually routed. Saving the
+            // current state under every removed device would overwrite the memory of devices
+            // that were not the active output.
             handleDeviceChange()
         }
     }
