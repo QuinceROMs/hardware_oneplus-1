@@ -113,7 +113,8 @@ class Session : public BnSession {
 
     // Template storage, backed by the TEE or /data depending on the useTee property.
     bool storeFeature(const std::vector<uint8_t>& feature);
-    bool removeFeature();
+    // Removes the template of an enrollment made with the given engine.
+    bool removeFeature(const std::string& engine);
     std::optional<float> matchFeature(const std::vector<uint8_t>& probe);
 
     std::shared_ptr<Hardware> mHw;

@@ -193,8 +193,8 @@ bool Session::storeFeature(const std::vector<uint8_t>& feature) {
     return true;
 }
 
-bool Session::removeFeature() {
-    if (mHw->auth.available()) return mHw->auth.removeTemplate();
+bool Session::removeFeature(const std::string& engine) {
+    if (engine != kCvEngine && mHw->auth.available()) return mHw->auth.removeTemplate();
     if (!useTee()) return unlink(kFeatureFile) == 0 || errno == ENOENT;
 
     FaceTee& tee = mHw->tee;
@@ -368,7 +368,7 @@ void Session::doEnroll(const keymaster::HardwareAuthToken& hat, ANativeWindow* p
     enrollment.engine = kCvEngine;
     if (!enrollment.save()) {
         PLOG(ERROR) << "Failed to save enrollment";
-        removeFeature();
+        removeFeature(enrollment.engine);
         mCb->onError(Error::UNABLE_TO_PROCESS, 0);
         return;
     }
@@ -671,7 +671,7 @@ ndk::ScopedAStatus Session::removeEnrollments(const std::vector<int32_t>& enroll
             return;
         }
 
-        if (!removeFeature()) {
+        if (!removeFeature(enrollment.engine)) {
             mCb->onError(Error::UNABLE_TO_REMOVE, 0);
             return;
         }
