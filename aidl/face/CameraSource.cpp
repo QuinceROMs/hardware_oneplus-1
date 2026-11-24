@@ -91,6 +91,16 @@ void CameraSource::onImageAvailable(void* context, AImageReader* reader) {
 void CameraSource::renderPreview(const std::vector<uint8_t>& nv21) {
     ANativeWindow_Buffer buffer;
     if (ANativeWindow_lock(mPreview, &buffer, nullptr) != 0) return;
+    if (buffer.width < kPreviewSize || buffer.height < kPreviewSize ||
+        buffer.stride < kPreviewSize || buffer.format != AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM) {
+        LOG(ERROR) << "Unusable preview buffer " << buffer.width << "x" << buffer.height
+                   << ", stride " << buffer.stride << ", format " << buffer.format;
+        ANativeWindow_unlockAndPost(mPreview);
+        // Only reached on the image reader thread, which stop() joins before it uses mPreview.
+        ANativeWindow_release(mPreview);
+        mPreview = nullptr;
+        return;
+    }
 
     const int rotation = (360 - mSensorOrientation % 360) % 360;
     const int rotatedWidth = rotation % 180 ? kHeight : kWidth;
@@ -151,10 +161,14 @@ bool CameraSource::start(ANativeWindow* preview) {
     if (!findFrontCamera()) return false;
 
     if (preview) {
-        ANativeWindow_acquire(preview);
-        ANativeWindow_setBuffersGeometry(preview, kPreviewSize, kPreviewSize,
-                                         AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM);
-        mPreview = preview;
+        if (int ret = ANativeWindow_setBuffersGeometry(preview, kPreviewSize, kPreviewSize,
+                                                       AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM);
+            ret != 0) {
+            LOG(ERROR) << "Failed to configure the preview, continuing without it: " << ret;
+        } else {
+            ANativeWindow_acquire(preview);
+            mPreview = preview;
+        }
     }
 
     {
