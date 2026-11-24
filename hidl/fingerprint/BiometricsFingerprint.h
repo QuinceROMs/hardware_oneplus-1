@@ -38,6 +38,7 @@ namespace implementation {
 
 using ::android::sp;
 using ::android::base::GetProperty;
+using ::android::hardware::hidl_death_recipient;
 using ::android::hardware::hidl_string;
 using ::android::hardware::Return;
 using ::android::hardware::Void;
@@ -133,6 +134,7 @@ class BiometricsFingerprint : public IBiometricsFingerprint,
     }
 
     sp<IOplusBiometricsFingerprint> mOplusBiometricsFingerprint;
+    sp<hidl_death_recipient> mOplusDeathRecipient;
     sp<V2_1::IBiometricsFingerprintClientCallback> mClientCallback;
     sp<V2_2::IBiometricsFingerprintClientCallback> mClientCallbackV2_2;
 

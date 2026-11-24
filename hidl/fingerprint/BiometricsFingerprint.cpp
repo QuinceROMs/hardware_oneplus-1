@@ -19,6 +19,7 @@
 #include "BiometricsFingerprint.h"
 
 #include <android-base/logging.h>
+#include <unistd.h>
 
 namespace android {
 namespace hardware {
@@ -26,6 +27,21 @@ namespace biometrics {
 namespace fingerprint {
 namespace V2_3 {
 namespace implementation {
+
+namespace {
+
+class OplusHalDeathRecipient : public hidl_death_recipient {
+  public:
+    void serviceDied(uint64_t /*cookie*/,
+                     const wp<::android::hidl::base::V1_0::IBase>& /*who*/) override {
+        // The restarted Oplus HAL has lost the callbacks and the active group. The framework sets
+        // them again once it sees this service die, so exit and let init restart it.
+        LOG(ERROR) << "Oplus fingerprint HAL died, exiting";
+        _exit(1);
+    }
+};
+
+}  // anonymous namespace
 
 BiometricsFingerprint::BiometricsFingerprint()
     : mOplusDisplayFd(open("/dev/oplus_display", O_RDWR | O_CLOEXEC)) {
@@ -38,6 +54,13 @@ bool BiometricsFingerprint::init() {
     mOplusBiometricsFingerprint = IOplusBiometricsFingerprint::getService();
     if (mOplusBiometricsFingerprint == nullptr) {
         LOG(ERROR) << "Oplus fingerprint HAL is not available";
+        return false;
+    }
+
+    mOplusDeathRecipient = new OplusHalDeathRecipient();
+    if (!mOplusBiometricsFingerprint->linkToDeath(mOplusDeathRecipient, 0 /*cookie*/)
+                 .withDefault(false)) {
+        LOG(ERROR) << "Failed to link to the death of the Oplus fingerprint HAL";
         return false;
     }
 
