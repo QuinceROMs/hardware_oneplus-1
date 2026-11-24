@@ -28,6 +28,9 @@ cc_binary {
     required: ["qwerty.kl"],
 }
 
+// Goodix fingerprint drivers register their input device as "qwerty". This empty
+// layout is picked by that name instead of Generic.kl, so none of the keys they
+// report is mapped.
 prebuilt_usr_keylayout {
     name: "qwerty.kl",
     src: "qwerty.kl",
