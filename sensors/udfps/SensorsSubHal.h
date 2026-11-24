@@ -74,6 +74,7 @@ class SensorsSubHal : public ISensorsSubHal, public ISensorsEventCallback {
     void AddSensor() {
         std::shared_ptr<SensorType> sensor =
                 std::make_shared<SensorType>(mNextHandle++ /* sensorHandle */, this /* callback */);
+        sensor->start();
         mSensors[sensor->getSensorInfo().sensorHandle] = sensor;
     }
 

@@ -51,6 +51,10 @@ class Sensor {
     Sensor(int32_t sensorHandle, ISensorsEventCallback* callback);
     virtual ~Sensor();
 
+    // Starts the thread that calls run(). Must be called on the fully constructed object, since
+    // run() is virtual.
+    void start();
+
     const SensorInfo& getSensorInfo() const;
     virtual void batch(int32_t samplingPeriodNs);
     virtual void activate(bool enable);

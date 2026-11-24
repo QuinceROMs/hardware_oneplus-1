@@ -86,7 +86,6 @@ Sensor::Sensor(int32_t sensorHandle, ISensorsEventCallback* callback)
     mSensorInfo.fifoMaxEventCount = 0;
     mSensorInfo.requiredPermission = "";
     mSensorInfo.flags = 0;
-    mRunThread = std::thread(startThread, this);
 }
 
 Sensor::~Sensor() {
@@ -98,7 +97,13 @@ Sensor::~Sensor() {
         mIsEnabled = false;
         mWaitCV.notify_all();
     }
-    mRunThread.join();
+    if (mRunThread.joinable()) {
+        mRunThread.join();
+    }
+}
+
+void Sensor::start() {
+    mRunThread = std::thread(startThread, this);
 }
 
 const SensorInfo& Sensor::getSensorInfo() const {
