@@ -290,9 +290,15 @@ bool FaceEngine::detect(const Frame& frame, int orientation, bool large, bool tr
         }
     }
 
+    const cv_landmarks_t& lm = best->landmarks;
+    if (!lm.points || lm.count <= 0) {
+        LOG(ERROR) << "Detected face has no landmarks";
+        releaseFaces(faces, count);
+        return false;
+    }
+
     out->face = *best;
     out->orientation = orientation;
-    const cv_landmarks_t& lm = best->landmarks;
     out->points.assign(lm.points, lm.points + lm.count);
     if (lm.occlusion) {
         out->occlusion.assign(lm.occlusion, lm.occlusion + lm.count);
