@@ -19,9 +19,7 @@ import android.os.Looper
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import org.lunaris.dolby.DolbyConstants
 import org.lunaris.dolby.data.AppProfileManager
 import org.lunaris.dolby.data.DolbyDispatchers
@@ -96,11 +94,8 @@ class AppProfileMonitorService : Service() {
                 pendingSwitchRunnable = null
             }
             
-            // Restore on the serial HAL worker so it runs after any in-flight app-switch;
-            // this teardown path is infrequent.
-            runBlocking(DolbyDispatchers.hal) {
-                dolbyRepository.restoreUserProfile()
-            }
+            // Queued behind any app switch already sent to the HAL dispatcher.
+            halScope.launch { dolbyRepository.restoreUserProfile() }
             
             DolbyConstants.dlog(TAG, "Stopped monitoring foreground app")
         }
@@ -230,8 +225,8 @@ class AppProfileMonitorService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         DolbyConstants.dlog(TAG, "Service destroyed")
+        // halScope is not cancelled, so the restore queued by stopMonitoring() still runs.
         stopMonitoring()
-        halScope.cancel()
     }
 
     companion object {
