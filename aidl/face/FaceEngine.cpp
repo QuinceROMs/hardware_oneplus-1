@@ -374,7 +374,14 @@ std::vector<uint8_t> FaceEngine::extractFeature(const Frame& frame, DetectedFace
 }
 
 float FaceEngine::compareFeatures(const std::vector<uint8_t>& a, const std::vector<uint8_t>& b) {
-    if (a.empty() || b.empty()) return -1.0f;
+    // The deserializer takes C strings, and the stored feature is read back from a file.
+    auto terminated = [](const std::vector<uint8_t>& v) {
+        return std::find(v.begin(), v.end(), '\0') != v.end();
+    };
+    if (!terminated(a) || !terminated(b)) {
+        LOG(ERROR) << "Feature is not NUL terminated";
+        return -1.0f;
+    }
 
     cv_feature_t* fa = deserializeFeature(reinterpret_cast<const char*>(a.data()));
     cv_feature_t* fb = deserializeFeature(reinterpret_cast<const char*>(b.data()));
