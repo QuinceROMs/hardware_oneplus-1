@@ -316,7 +316,8 @@ void Session::doEnroll(const keymaster::HardwareAuthToken& hat, ANativeWindow* p
             info = toAcquiredInfo(quality);
         } else if (!engine.eyesOpen(frame, face)) {
             info = AcquiredInfo::POOR_GAZE;
-        } else if (engine.spoofScore(frame, face) > kSpoofThreshold) {
+        } else if (auto spoof = engine.spoofScore(frame, face);
+                   !spoof || *spoof > kSpoofThreshold) {
             info = AcquiredInfo::INSUFFICIENT;
         }
 
@@ -463,13 +464,14 @@ void Session::doAuthenticate(const std::future<void>& cancel) {
 
         std::vector<uint8_t> feature = engine.extractFeature(frame, face);
         if (feature.empty()) continue;
-        float spoof = engine.spoofScore(frame, face);
+        std::optional<float> spoof = engine.spoofScore(frame, face);
+        if (!spoof) continue;
         std::optional<float> score = matchFeature(feature);
         if (!score) continue;
         compared = true;
 
-        LOG(DEBUG) << "Match score " << *score << ", spoof score " << spoof;
-        if (*score >= kMatchThreshold && spoof <= kSpoofThreshold) {
+        LOG(DEBUG) << "Match score " << *score << ", spoof score " << *spoof;
+        if (*score >= kMatchThreshold && *spoof <= kSpoofThreshold) {
             matched = true;
             break;
         }

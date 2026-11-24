@@ -332,11 +332,15 @@ bool FaceEngine::eyesOpen(const Frame& frame, const DetectedFace& face) {
     return scores[0] > kEyeOpenThreshold || scores[1] > kEyeOpenThreshold;
 }
 
-float FaceEngine::spoofScore(const Frame& frame, DetectedFace& face) {
+std::optional<float> FaceEngine::spoofScore(const Frame& frame, DetectedFace& face) {
     cv_face_t f = face.get();
     float score = 0.0f;
-    detectHackness(mHackness, frame.nv21, CV_PIX_FMT_NV21, frame.width, frame.height, frame.width,
-                   &f.landmarks, &score, face.orientation);
+    int ret = detectHackness(mHackness, frame.nv21, CV_PIX_FMT_NV21, frame.width, frame.height,
+                             frame.width, &f.landmarks, &score, face.orientation);
+    if (ret != 0) {
+        LOG(ERROR) << "Failed to detect liveness: " << ret;
+        return std::nullopt;
+    }
     return score;
 }
 

@@ -8,6 +8,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <optional>
 #include <vector>
 
 #include "ST.h"
@@ -54,7 +55,8 @@ class FaceEngine {
                 DetectedFace* out);
     Quality checkQuality(const Frame& frame, DetectedFace& face);
     bool eyesOpen(const Frame& frame, const DetectedFace& face);
-    float spoofScore(const Frame& frame, DetectedFace& face);
+    // Returns the likelihood of a spoof, or nullopt if liveness could not be evaluated.
+    std::optional<float> spoofScore(const Frame& frame, DetectedFace& face);
     void resetLiveness();
     std::vector<uint8_t> extractFeature(const Frame& frame, DetectedFace& face);
 
