@@ -45,6 +45,7 @@ class KeyHandler(private val context: Context) : DeviceKeyHandler {
 
     private val handlerThread = HandlerThread("KeyHandlerThread").apply { start() }
     private val handler = Handler(handlerThread.looper)
+    private val ringerFixupToken = Any()
     private var needsRun = false
     private var prevKeyCode = 0
 
@@ -101,16 +102,30 @@ class KeyHandler(private val context: Context) : DeviceKeyHandler {
             return event
         }
 
+        if (event.action != KeyEvent.ACTION_UP) { // Only handle ACTION_UP event
+            return null
+        }
+
+        // Keep the procfs and preference reads off the input policy thread
+        handler.post {
+            try {
+                handleSliderState()
+            } catch (e: Exception) {
+                // Nothing else catches on this thread, a throw here would take the process down
+                Log.e(TAG, "Failed to handle the slider state", e)
+            }
+        }
+
+        return null
+    }
+
+    private fun handleSliderState() {
         val scanCode = File("/proc/tristatekey/tri_state").readText().trim().toInt()
         val keyCodeValue = when (scanCode) {
             1 -> sharedPreferences.getString(ALERT_SLIDER_TOP_KEY, "2")!!.toInt()
             2 -> sharedPreferences.getString(ALERT_SLIDER_MIDDLE_KEY, "1")!!.toInt()
             3 -> sharedPreferences.getString(ALERT_SLIDER_BOTTOM_KEY, "0")!!.toInt()
-            else -> return event
-        }
-
-        if (event.action != KeyEvent.ACTION_UP) { // Only handle ACTION_UP event
-            return null
+            else -> return
         }
 
         val applied = when (keyCodeValue) {
@@ -128,13 +143,12 @@ class KeyHandler(private val context: Context) : DeviceKeyHandler {
         if (applied && sharedPreferences.getBoolean(SLIDER_DIALOG_ENABLED, true)) {
             sendNotification(scanCode, keyCodeValue)
         }
-
-        return null
     }
 
     private fun applyRingerMode(keyCodeValue: Int) {
         needsRun = false
-        handler.removeCallbacksAndMessages(null)
+        // Only drop the pending ringer fixup, slider events wait on the same handler
+        handler.removeCallbacksAndMessages(ringerFixupToken)
 
         val targetRingerMode = supportedSliderRingModes[keyCodeValue] ?: AudioManager.RINGER_MODE_NORMAL
         val targetZenMode = supportedSliderZenModes[keyCodeValue] ?: Settings.Global.ZEN_MODE_OFF
@@ -151,7 +165,7 @@ class KeyHandler(private val context: Context) : DeviceKeyHandler {
                 if (audioManager.ringerModeInternal != targetRingerMode && needsRun) {
                     audioManager.ringerModeInternal = targetRingerMode
                 }
-            }, 200) // 200ms delay to ensure ringer mode is set correctly
+            }, ringerFixupToken, 200) // 200ms delay to ensure ringer mode is set correctly
         } else {
             // here we have to vibrate before setting anything else.
             // also setRingerModeInternal before setZenMode because it could set the ringer mode
