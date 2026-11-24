@@ -97,6 +97,9 @@ class Session : public BnSession {
     // whose callbacks have no error, as ISessionCallback#onError is only defined for some of them.
     std::shared_ptr<common::ICancellationSignal> schedule(
             std::optional<Error> queueFullError, std::function<void(const std::future<void>&)> op);
+    // Runs onQueueFull instead, for operations that report failure through their own callback.
+    std::shared_ptr<common::ICancellationSignal> schedule(
+            std::function<void()> onQueueFull, std::function<void(const std::future<void>&)> op);
 
     std::shared_ptr<common::ICancellationSignal> scheduleEnroll(
             const keymaster::HardwareAuthToken& hat, ANativeWindow* preview);

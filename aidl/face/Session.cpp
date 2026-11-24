@@ -145,6 +145,13 @@ Session::Session(std::shared_ptr<Hardware> hw, int32_t userId, std::shared_ptr<I
 
 std::shared_ptr<common::ICancellationSignal> Session::schedule(
         std::optional<Error> queueFullError, std::function<void(const std::future<void>&)> op) {
+    std::function<void()> onQueueFull;
+    if (queueFullError) onQueueFull = [this, error = *queueFullError] { mCb->onError(error, 0); };
+    return schedule(std::move(onQueueFull), std::move(op));
+}
+
+std::shared_ptr<common::ICancellationSignal> Session::schedule(
+        std::function<void()> onQueueFull, std::function<void(const std::future<void>&)> op) {
     std::promise<void> promise;
     std::future<void> future = promise.get_future();
     if (!mWorker.schedule(Callable::from([this, op = std::move(op), future = std::move(future)] {
@@ -152,7 +159,7 @@ std::shared_ptr<common::ICancellationSignal> Session::schedule(
             op(future);
         }))) {
         LOG(ERROR) << "Operation queue is full, dropping the operation";
-        if (queueFullError) mCb->onError(*queueFullError, 0);
+        if (onQueueFull) onQueueFull();
     }
     return ndk::SharedRefBase::make<CancellationSignal>(std::move(promise));
 }
@@ -662,7 +669,10 @@ ndk::ScopedAStatus Session::enumerateEnrollments() {
 }
 
 ndk::ScopedAStatus Session::removeEnrollments(const std::vector<int32_t>& enrollmentIds) {
-    schedule(Error::UNABLE_TO_REMOVE, [this, enrollmentIds](const std::future<void>&) {
+    // The framework finishes a removal only through onEnrollmentsRemoved, where an empty list means
+    // failure; its removal client drops onError.
+    const auto removalFailed = [this] { mCb->onEnrollmentsRemoved({}); };
+    schedule(removalFailed, [this, enrollmentIds, removalFailed](const std::future<void>&) {
         Enrollment enrollment = Enrollment::load();
         if (enrollment.userId != mUserId ||
             std::find(enrollmentIds.begin(), enrollmentIds.end(), enrollment.enrollmentId) ==
@@ -672,12 +682,12 @@ ndk::ScopedAStatus Session::removeEnrollments(const std::vector<int32_t>& enroll
         }
 
         if (!removeFeature(enrollment.engine)) {
-            mCb->onError(Error::UNABLE_TO_REMOVE, 0);
+            removalFailed();
             return;
         }
         if (!Enrollment().save()) {
             PLOG(ERROR) << "Failed to remove enrollment";
-            mCb->onError(Error::UNABLE_TO_REMOVE, 0);
+            removalFailed();
             return;
         }
         mCb->onEnrollmentsRemoved(enrollmentIds);
