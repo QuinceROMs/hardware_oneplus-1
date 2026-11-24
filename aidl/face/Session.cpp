@@ -319,11 +319,15 @@ void Session::doEnroll(const keymaster::HardwareAuthToken& hat, ANativeWindow* p
         Frame frame = {nv21.data(), CameraSource::kWidth, CameraSource::kHeight};
         DetectedFace face;
         AcquiredInfo info = AcquiredInfo::GOOD;
+        // Like the stock app, a frame that only fails the image quality or brightness checks is
+        // skipped without dropping the good frames collected so far.
+        bool keepGoodFrames = false;
         if (!engine.detect(frame, orientation, false, false, &face)) {
             info = AcquiredInfo::NOT_DETECTED;
         } else if (auto quality = engine.checkQuality(frame, face);
                    quality != FaceEngine::Quality::GOOD) {
             info = toAcquiredInfo(quality);
+            keepGoodFrames = quality != FaceEngine::Quality::POOR_GAZE;
         } else if (!engine.eyesOpen(frame, face)) {
             info = AcquiredInfo::POOR_GAZE;
         } else if (auto spoof = engine.spoofScore(frame, face);
@@ -336,7 +340,7 @@ void Session::doEnroll(const keymaster::HardwareAuthToken& hat, ANativeWindow* p
             lastInfo = info;
         }
         if (info != AcquiredInfo::GOOD) {
-            goodFrames = 0;
+            if (!keepGoodFrames) goodFrames = 0;
             continue;
         }
 
