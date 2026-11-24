@@ -10,6 +10,8 @@ hal_server_domain(hal_oneplus_face, hal_face)
 binder_call(cameraserver, hal_oneplus_face)
 binder_call(hal_oneplus_face, cameraserver)
 
+# libstfaceunlock{,snpe}.so make memory PROT_READ|PROT_WRITE|PROT_EXEC
+# while they copy code into it.
 allow hal_oneplus_face self:process execmem;
 
 allow hal_oneplus_face fwk_camera_service:service_manager find;
