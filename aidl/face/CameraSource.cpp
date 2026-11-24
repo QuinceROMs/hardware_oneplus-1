@@ -198,16 +198,25 @@ bool CameraSource::start(ANativeWindow* preview) {
         return false;
     }
     AImageReader_ImageListener listener = {.context = this, .onImageAvailable = onImageAvailable};
-    AImageReader_setImageListener(mReader, &listener);
-
     ANativeWindow* readerWindow = nullptr;
-    AImageReader_getWindow(mReader, &readerWindow);
-    ACaptureSessionOutputContainer_create(&mOutputs);
-    ACaptureSessionOutput_create(readerWindow, &mSessionOutput);
-    ACaptureSessionOutputContainer_add(mOutputs, mSessionOutput);
-    ACameraDevice_createCaptureRequest(mDevice, TEMPLATE_PREVIEW, &mRequest);
-    ACameraOutputTarget_create(readerWindow, &mTarget);
-    ACaptureRequest_addTarget(mRequest, mTarget);
+    if (AImageReader_setImageListener(mReader, &listener) != AMEDIA_OK ||
+        AImageReader_getWindow(mReader, &readerWindow) != AMEDIA_OK) {
+        LOG(ERROR) << "Failed to set up image reader";
+        stop();
+        return false;
+    }
+
+    if ((ret = ACaptureSessionOutputContainer_create(&mOutputs)) != ACAMERA_OK ||
+        (ret = ACaptureSessionOutput_create(readerWindow, &mSessionOutput)) != ACAMERA_OK ||
+        (ret = ACaptureSessionOutputContainer_add(mOutputs, mSessionOutput)) != ACAMERA_OK ||
+        (ret = ACameraDevice_createCaptureRequest(mDevice, TEMPLATE_PREVIEW, &mRequest)) !=
+                ACAMERA_OK ||
+        (ret = ACameraOutputTarget_create(readerWindow, &mTarget)) != ACAMERA_OK ||
+        (ret = ACaptureRequest_addTarget(mRequest, mTarget)) != ACAMERA_OK) {
+        LOG(ERROR) << "Failed to set up capture request: " << ret;
+        stop();
+        return false;
+    }
 
     ACameraCaptureSession_stateCallbacks sessionCallbacks = {
             .onClosed = [](void*, ACameraCaptureSession*) {},
@@ -241,18 +250,23 @@ void CameraSource::stop() {
         ACameraDevice_close(mDevice);
         mDevice = nullptr;
     }
-    if (mRequest) {
-        ACaptureRequest_removeTarget(mRequest, mTarget);
+    // Setup can fail between any two of these, so each one is released on its own.
+    if (mRequest && mTarget) ACaptureRequest_removeTarget(mRequest, mTarget);
+    if (mTarget) {
         ACameraOutputTarget_free(mTarget);
-        ACaptureRequest_free(mRequest);
         mTarget = nullptr;
+    }
+    if (mRequest) {
+        ACaptureRequest_free(mRequest);
         mRequest = nullptr;
     }
-    if (mOutputs) {
-        ACaptureSessionOutputContainer_remove(mOutputs, mSessionOutput);
+    if (mOutputs && mSessionOutput) ACaptureSessionOutputContainer_remove(mOutputs, mSessionOutput);
+    if (mSessionOutput) {
         ACaptureSessionOutput_free(mSessionOutput);
-        ACaptureSessionOutputContainer_free(mOutputs);
         mSessionOutput = nullptr;
+    }
+    if (mOutputs) {
+        ACaptureSessionOutputContainer_free(mOutputs);
         mOutputs = nullptr;
     }
     if (mReader) {
