@@ -60,11 +60,6 @@
                 android:value="com.android.settings.category.ia.sound" />
         </activity>
 
-        <service
-            android:name=".KeyHandler"
-            android:permission="KeyHandlerService"
-            android:exported="false" />
-        
        <service
             android:name=".AlertSliderPlugin"
             android:exported="false">
