@@ -39,6 +39,14 @@ class DolbyRepository private constructor(private val context: Context) {
     private val _currentProfile = MutableStateFlow(readSavedProfile() ?: 0)
     val currentProfile: StateFlow<Int> = _currentProfile.asStateFlow()
 
+    init {
+        // Older versions kept this key only while app profile monitoring was on. Without it no
+        // app profile was active, so the saved profile is the one the user picked.
+        if (!defaultPrefs.contains(DolbyConstants.PREF_USER_PROFILE)) {
+            defaultPrefs.edit().putInt(DolbyConstants.PREF_USER_PROFILE, readSavedProfile() ?: 0).apply()
+        }
+    }
+
     val stereoWideningSupported = context.resources.getBoolean(R.bool.dolby_stereo_widening_supported)
     val volumeLevelerSupported = context.resources.getBoolean(R.bool.dolby_volume_leveler_supported)
     
@@ -247,8 +255,31 @@ class DolbyRepository private constructor(private val context: Context) {
         }
     }
 
+    /**
+     * Selects [profile] as the user's choice, which the app profile monitor returns to for apps
+     * without a profile of their own.
+     */
     fun setCurrentProfile(profile: Int) {
-        try {
+        if (selectProfile(profile)) {
+            defaultPrefs.edit().putInt(DolbyConstants.PREF_USER_PROFILE, profile).apply()
+        }
+    }
+
+    /** Selects [profile] for the foreground app without changing the user's choice. */
+    fun setAppProfile(profile: Int) {
+        selectProfile(profile)
+    }
+
+    fun restoreUserProfile() {
+        val userProfile = defaultPrefs.getInt(DolbyConstants.PREF_USER_PROFILE, 0)
+        if (readSavedProfile() != userProfile) {
+            DolbyConstants.dlog(TAG, "Returning to the user's profile $userProfile")
+            selectProfile(userProfile)
+        }
+    }
+
+    private fun selectProfile(profile: Int): Boolean {
+        return try {
             val effect = requireEffect()
             effect.profile = profile
             defaultPrefs.edit().putString(DolbyConstants.PREF_PROFILE, profile.toString()).apply()
@@ -259,8 +290,10 @@ class DolbyRepository private constructor(private val context: Context) {
             _currentProfile.value = profile
             DolbyConstants.dlog(TAG, "Profile set to: $profile")
             requestTileUpdate()
+            true
         } catch (e: Exception) {
             DolbyConstants.dlog(TAG, "Error setting current profile: ${e.message}")
+            false
         }
     }
 

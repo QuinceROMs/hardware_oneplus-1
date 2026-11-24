@@ -6,7 +6,6 @@
 package org.lunaris.dolby.service
 
 import android.service.notification.NotificationListenerService
-import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -41,20 +40,14 @@ class DolbyNotificationListener : NotificationListenerService() {
         requestRebind(android.content.ComponentName(this, DolbyNotificationListener::class.java))
     }
 
+    // Re-applies the saved state without selecting a profile, which would record the profile of
+    // the foreground app as the user's choice.
     private fun initializeDolbySettings() {
         val prefs = getSharedPreferences("dolby_prefs", MODE_PRIVATE)
-        val savedProfile = prefs.getString(DolbyConstants.PREF_PROFILE, "0")?.toIntOrNull() ?: 0
         val enabled = prefs.getBoolean(DolbyConstants.PREF_ENABLE, false)
-        DolbyConstants.dlog(TAG, "Initializing Dolby - enabled: $enabled, profile: $savedProfile")
+        DolbyConstants.dlog(TAG, "Initializing Dolby - enabled: $enabled")
         if (enabled) {
-            halScope.launch {
-                try {
-                    dolbyRepository.setCurrentProfile(savedProfile)
-                    dolbyRepository.setDolbyEnabled(true)
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to initialize Dolby settings", e)
-                }
-            }
+            halScope.launch { dolbyRepository.applySavedState() }
         }
     }
 

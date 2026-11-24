@@ -39,11 +39,8 @@ class AppProfileMonitorService : Service() {
     private lateinit var dolbyRepository: DolbyRepository
     private lateinit var audioManager: AudioManager
     private val lastPackageName = AtomicReference<String?>(null)
-    private var originalProfile: Int = -1
     private var isMonitoring = false
     private var pendingSwitchRunnable: Runnable? = null
-    private var hasOriginalProfile = false
-    private var lastProfileChangeTime: Long = 0
     private var lastQueryTime: Long = 0
 
     private val checkForegroundAppRunnable = object : Runnable {
@@ -64,10 +61,7 @@ class AppProfileMonitorService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            ACTION_START_MONITORING -> {
-                captureOriginalProfile()
-                startMonitoring()
-            }
+            ACTION_START_MONITORING -> startMonitoring()
             ACTION_STOP_MONITORING -> {
                 stopMonitoring()
                 stopSelf()
@@ -75,7 +69,6 @@ class AppProfileMonitorService : Service() {
             else -> {
                 val prefs = getSharedPreferences("dolby_prefs", Context.MODE_PRIVATE)
                 if (prefs.getBoolean(PREF_MONITORING_ENABLED, false)) {
-                    captureOriginalProfile()
                     startMonitoring()
                 } else {
                     stopSelf()
@@ -85,34 +78,15 @@ class AppProfileMonitorService : Service() {
         return START_STICKY
     }
 
-    private fun captureOriginalProfile() {
-        if (hasOriginalProfile) return
-
-        val prefs = getSharedPreferences("dolby_prefs", Context.MODE_PRIVATE)
-        val persisted = prefs.getInt(PREF_ORIGINAL_PROFILE, -1)
-        if (persisted >= 0) {
-            originalProfile = persisted
-            DolbyConstants.dlog(TAG, "Recovered original profile from prefs: $originalProfile")
-        } else {
-            originalProfile = prefs.getString(DolbyConstants.PREF_PROFILE, "0")?.toIntOrNull() ?: 0
-            prefs.edit().putInt(PREF_ORIGINAL_PROFILE, originalProfile).apply()
-            DolbyConstants.dlog(TAG, "Captured original profile: $originalProfile")
-        }
-        hasOriginalProfile = true
-    }
-
     private fun startMonitoring() {
         if (!isMonitoring) {
             isMonitoring = true
-            DolbyConstants.dlog(TAG, "Started monitoring foreground app (original profile: $originalProfile)")
+            DolbyConstants.dlog(TAG, "Started monitoring foreground app")
             handler.post(checkForegroundAppRunnable)
         }
     }
 
     private fun stopMonitoring() {
-        getSharedPreferences("dolby_prefs", Context.MODE_PRIVATE)
-            .edit().remove(PREF_ORIGINAL_PROFILE).apply()
-
         if (isMonitoring) {
             isMonitoring = false
             handler.removeCallbacks(checkForegroundAppRunnable)
@@ -122,23 +96,10 @@ class AppProfileMonitorService : Service() {
                 pendingSwitchRunnable = null
             }
             
-            if (hasOriginalProfile && originalProfile >= 0) {
-                DolbyConstants.dlog(TAG, "Restoring original profile: $originalProfile")
-                // Restore on the serial HAL worker so it runs after any in-flight app-switch;
-                // this teardown path is infrequent.
-                runBlocking(DolbyDispatchers.hal) {
-                    dolbyRepository.setCurrentProfile(originalProfile)
-                }
-                
-                val prefs = getSharedPreferences("dolby_prefs", Context.MODE_PRIVATE)
-                val currentProfile = prefs.getString(DolbyConstants.PREF_PROFILE, "0")?.toIntOrNull() ?: 0
-                if (currentProfile != originalProfile) {
-                    DolbyConstants.dlog(TAG, "WARNING: Profile restoration mismatch! Expected: $originalProfile, Got: $currentProfile")
-                } else {
-                    DolbyConstants.dlog(TAG, "Profile restored successfully")
-                }
-            } else {
-                DolbyConstants.dlog(TAG, "No valid original profile to restore (hasOriginal=$hasOriginalProfile, profile=$originalProfile)")
+            // Restore on the serial HAL worker so it runs after any in-flight app-switch;
+            // this teardown path is infrequent.
+            runBlocking(DolbyDispatchers.hal) {
+                dolbyRepository.restoreUserProfile()
             }
             
             DolbyConstants.dlog(TAG, "Stopped monitoring foreground app")
@@ -198,9 +159,7 @@ class AppProfileMonitorService : Service() {
                             
                             if (assignedProfile >= 0) {
                                 DolbyConstants.dlog(TAG, "Switching to profile $assignedProfile for $packageName")
-                                lastProfileChangeTime = System.currentTimeMillis()
-                                halScope.launch { dolbyRepository.setCurrentProfile(assignedProfile) }
-                                DolbyConstants.dlog(TAG, "App profile active - original profile remains: $originalProfile")
+                                halScope.launch { dolbyRepository.setAppProfile(assignedProfile) }
                                 
                                 if (showToasts) {
                                     val profileName = dolbyProfileName(this@AppProfileMonitorService, assignedProfile)
@@ -211,19 +170,7 @@ class AppProfileMonitorService : Service() {
                                     )
                                 }
                             } else {
-                                if (hasOriginalProfile && originalProfile >= 0) {
-                                    val currentProfile = prefs.getString(DolbyConstants.PREF_PROFILE, "0")?.toIntOrNull() ?: 0
-                                    
-                                    if (currentProfile != originalProfile) {
-                                        DolbyConstants.dlog(TAG, "Restoring original profile $originalProfile for $packageName (current: $currentProfile)")
-                                        lastProfileChangeTime = System.currentTimeMillis()
-                                        halScope.launch { dolbyRepository.setCurrentProfile(originalProfile) }
-                                    } else {
-                                        DolbyConstants.dlog(TAG, "Already on original profile $originalProfile, no change needed")
-                                    }
-                                } else {
-                                    DolbyConstants.dlog(TAG, "No original profile to restore (hasOriginal=$hasOriginalProfile, profile=$originalProfile)")
-                                }
+                                halScope.launch { dolbyRepository.restoreUserProfile() }
                             }
                         } catch (e: Exception) {
                             Log.e(TAG, "Error switching profile", e)
@@ -285,7 +232,6 @@ class AppProfileMonitorService : Service() {
         DolbyConstants.dlog(TAG, "Service destroyed")
         stopMonitoring()
         halScope.cancel()
-        hasOriginalProfile = false
     }
 
     companion object {
@@ -295,7 +241,6 @@ class AppProfileMonitorService : Service() {
         private const val SWITCH_DELAY = 300L
 
         private const val PREF_MONITORING_ENABLED = "app_profile_monitoring_enabled"
-        private const val PREF_ORIGINAL_PROFILE = "app_profile_original_profile"
 
         const val ACTION_START_MONITORING = "org.lunaris.dolby.START_MONITORING"
         const val ACTION_STOP_MONITORING = "org.lunaris.dolby.STOP_MONITORING"

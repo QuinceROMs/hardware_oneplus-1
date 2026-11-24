@@ -31,6 +31,7 @@ object DolbyConstants {
     const val PREF_PRESETS_MIGRATED = "presets_migrated"
     const val PREF_BAND_MODE = "dolby_band_mode"
     const val PREF_DEVICE_STATE_MEMORY = "device_state_memory_enabled"
+    const val PREF_USER_PROFILE = "app_profile_original_profile"
     
     const val PREF_FILE_PRESETS = "presets"
 
