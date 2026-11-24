@@ -33,11 +33,19 @@ class AutoEqCache(context: Context) {
     }
 
     suspend fun saveProfile(profile: AutoEqProfile) = withContext(Dispatchers.IO) {
-        File(profilesDir, "${profile.id}.json").writeText(AutoEqProfile.toJson(profile))
+        profileFile(profile.id).writeText(AutoEqProfile.toJson(profile))
     }
 
     suspend fun loadProfile(id: String): AutoEqProfile? = withContext(Dispatchers.IO) {
-        val file = File(profilesDir, "$id.json")
+        val file = profileFile(id)
         if (file.exists()) AutoEqProfile.fromJson(file.readText()) else null
+    }
+
+    private fun profileFile(id: String): File {
+        val file = File(profilesDir, "${AutoEqIds.requireValid(id)}.json")
+        if (file.canonicalFile.parentFile != profilesDir.canonicalFile) {
+            throw IllegalArgumentException("AutoEQ profile path outside the cache")
+        }
+        return file
     }
 }

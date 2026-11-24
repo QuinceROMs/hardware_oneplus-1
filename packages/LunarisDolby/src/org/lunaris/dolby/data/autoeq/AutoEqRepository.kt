@@ -48,6 +48,7 @@ class AutoEqRepository(context: Context) {
     }
 
     suspend fun getProfile(id: String): AutoEqProfile? = withContext(Dispatchers.IO) {
+        AutoEqIds.requireValid(id)
         memoryCache.get(id)?.let { return@withContext it }
         
         val diskProfile = cache.loadProfile(id)
@@ -59,6 +60,8 @@ class AutoEqRepository(context: Context) {
         downloadMutex.withLock {
             val remoteString = api.getProfile(id) ?: return@withContext null
             val profile = AutoEqProfile.fromJson(remoteString)
+            // The file is named after the id inside the profile, which must be the one requested.
+            if (profile.id != id) throw IllegalArgumentException("AutoEQ profile id mismatch")
             
             cache.saveProfile(profile)
             memoryCache.put(id, profile)

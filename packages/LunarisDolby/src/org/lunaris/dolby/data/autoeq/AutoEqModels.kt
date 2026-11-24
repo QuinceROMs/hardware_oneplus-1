@@ -5,8 +5,34 @@
 
 package org.lunaris.dolby.data.autoeq
 
+import android.util.Log
 import org.json.JSONArray
+import org.json.JSONException
 import org.json.JSONObject
+
+private const val TAG = "AutoEqModels"
+
+/**
+ * Profile ids come from the network and become file names and URL path segments, so they are
+ * checked against a strict pattern instead of being sanitised. The ids in the upstream index use
+ * only lowercase letters, digits and underscores.
+ */
+object AutoEqIds {
+    private val PATTERN = Regex("[A-Za-z0-9][A-Za-z0-9._-]{0,127}")
+
+    fun isValid(id: String): Boolean = PATTERN.matches(id)
+
+    fun requireValid(id: String): String {
+        if (!isValid(id)) throw IllegalArgumentException("Invalid AutoEQ profile id")
+        return id
+    }
+
+    fun fromJson(obj: JSONObject): String {
+        val id = obj.getString("id")
+        if (!isValid(id)) throw JSONException("Invalid AutoEQ profile id")
+        return id
+    }
+}
 
 data class AutoEqMetadata(
     val version: Int,
@@ -45,7 +71,7 @@ data class IndexEntry(
     companion object {
         fun fromJson(obj: JSONObject): IndexEntry {
             return IndexEntry(
-                id = obj.getString("id"),
+                id = AutoEqIds.fromJson(obj),
                 name = obj.getString("name"),
                 source = obj.optString("source", "Unknown"),
                 measurementRig = obj.optString("measurementRig", "Unknown"),
@@ -75,7 +101,7 @@ data class AutoEqProfile(
         fun fromJson(json: String): AutoEqProfile {
             val obj = JSONObject(json)
             return AutoEqProfile(
-                id = obj.getString("id"),
+                id = AutoEqIds.fromJson(obj),
                 name = obj.getString("name"),
                 graphicEq = obj.getString("graphicEq"),
                 preamp = if (obj.has("preamp") && !obj.isNull("preamp")) obj.getDouble("preamp").toFloat() else null
@@ -102,7 +128,12 @@ data class AutoEqIndex(
             val profilesArray = obj.getJSONArray("profiles")
             val profiles = mutableListOf<IndexEntry>()
             for (i in 0 until profilesArray.length()) {
-                profiles.add(IndexEntry.fromJson(profilesArray.getJSONObject(i)))
+                val entry = profilesArray.getJSONObject(i)
+                if (!AutoEqIds.isValid(entry.optString("id"))) {
+                    Log.w(TAG, "Skipping index entry $i with an invalid id")
+                    continue
+                }
+                profiles.add(IndexEntry.fromJson(entry))
             }
             return AutoEqIndex(
                 version = obj.getInt("version"),
