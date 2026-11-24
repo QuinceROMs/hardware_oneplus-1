@@ -20,33 +20,36 @@
 #include <log/log.h>
 #include <utils/SystemClock.h>
 
+#include <cerrno>
 #include <cmath>
+#include <cstdio>
+#include <cstring>
 
 namespace {
 
 static bool readFpState(int fd, int& screenX, int& screenY) {
     char buffer[512];
-    int state = 0;
-    int rc;
 
-    rc = lseek(fd, 0, SEEK_SET);
-    if (rc) {
-        ALOGE("failed to seek: %d", rc);
+    if (lseek(fd, 0, SEEK_SET) != 0) {
+        ALOGE("failed to seek: %s", strerror(errno));
         return false;
     }
 
-    rc = read(fd, &buffer, sizeof(buffer));
-    if (rc < 0) {
-        ALOGE("failed to read state: %d", rc);
+    ssize_t len = read(fd, buffer, sizeof(buffer) - 1);
+    if (len < 0) {
+        ALOGE("failed to read state: %s", strerror(errno));
+        return false;
+    }
+    buffer[len] = '\0';
+
+    int x, y, state;
+    if (sscanf(buffer, "%d,%d,%d", &x, &y, &state) != 3) {
+        ALOGE("failed to parse fp state: %s", buffer);
         return false;
     }
 
-    rc = sscanf(buffer, "%d,%d,%d", &screenX, &screenY, &state);
-    if (rc < 0) {
-        ALOGE("failed to parse fp state: %d", rc);
-        return false;
-    }
-
+    screenX = x;
+    screenY = y;
     return state > 0;
 }
 
@@ -297,10 +300,12 @@ void UdfpsSensor::run() {
             // Cannot hold lock while polling.
             runLock.unlock();
             int rc = poll(mPolls, 2, -1);
+            int pollErrno = errno;
             runLock.lock();
 
             if (rc < 0) {
-                ALOGE("failed to poll: %d", rc);
+                if (pollErrno == EINTR) continue;
+                ALOGE("failed to poll: %s", strerror(pollErrno));
                 mStopThread = true;
                 continue;
             }
