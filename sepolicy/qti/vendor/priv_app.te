@@ -1,5 +1,3 @@
-allow priv_app oem_service:service_manager find;
-
 # OnePlus Camera
 typeattribute priv_app_36 halclientdomain;
 typeattribute priv_app_36 vendor_hal_cameraMDM_client;
