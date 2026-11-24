@@ -17,7 +17,6 @@ namespace vendor {
 namespace lineage {
 namespace livedisplay {
 
-static const std::string kModeBasePath = "/sys/class/drm/card0-DSI-1/";
 static const std::string kDefaultPath = "/data/vendor/display/default_display_mode";
 
 // Mode ids here must match qdcm display mode ids
