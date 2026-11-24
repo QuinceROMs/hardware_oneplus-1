@@ -36,7 +36,7 @@ class DolbyRepository private constructor(private val context: Context) {
     private val _isOnSpeaker = MutableStateFlow(_activeAudioDevice.value.isOnSpeaker)
     val isOnSpeaker: StateFlow<Boolean> = _isOnSpeaker.asStateFlow()
     
-    private val _currentProfile = MutableStateFlow(0)
+    private val _currentProfile = MutableStateFlow(readSavedProfile() ?: 0)
     val currentProfile: StateFlow<Int> = _currentProfile.asStateFlow()
 
     val stereoWideningSupported = context.resources.getBoolean(R.bool.dolby_stereo_widening_supported)
