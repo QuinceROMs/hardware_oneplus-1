@@ -31,6 +31,8 @@ class CameraSource {
     // Waits for the next frame until the deadline or until shouldStop returns true.
     bool nextFrame(std::vector<uint8_t>* nv21, std::chrono::steady_clock::time_point deadline,
                    const std::function<bool()>& shouldStop);
+    // Whether the device was disconnected or reported an error since start().
+    bool failed();
 
     int sensorOrientation() const { return mSensorOrientation; }
 

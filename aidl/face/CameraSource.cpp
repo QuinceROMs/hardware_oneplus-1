@@ -270,6 +270,11 @@ bool CameraSource::nextFrame(std::vector<uint8_t>* nv21,
     return true;
 }
 
+bool CameraSource::failed() {
+    std::lock_guard lock(mMutex);
+    return mFailed;
+}
+
 bool CameraSource::copyImage(AImage* image, std::vector<uint8_t>* nv21) {
     int32_t width = 0, height = 0;
     AImage_getWidth(image, &width);

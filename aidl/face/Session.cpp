@@ -343,10 +343,14 @@ void Session::doEnroll(const keymaster::HardwareAuthToken& hat, ANativeWindow* p
         if (!feature.empty()) break;
         goodFrames = 0;
     }
+    bool cameraFailed = camera.failed();
     camera.stop();
 
     if (feature.empty()) {
-        mCb->onError(cancelled() ? Error::CANCELED : Error::TIMEOUT, 0);
+        mCb->onError(cancelled()    ? Error::CANCELED
+                     : cameraFailed ? Error::HW_UNAVAILABLE
+                                    : Error::TIMEOUT,
+                     0);
         return;
     }
 
@@ -476,6 +480,7 @@ void Session::doAuthenticate(const std::future<void>& cancel) {
             break;
         }
     }
+    bool cameraFailed = camera.failed();
     camera.stop();
 
     if (matched) {
@@ -484,6 +489,8 @@ void Session::doAuthenticate(const std::future<void>& cancel) {
         mCb->onAuthenticationSucceeded(enrollment.enrollmentId, keymaster::HardwareAuthToken());
     } else if (cancelled()) {
         mCb->onError(Error::CANCELED, 0);
+    } else if (cameraFailed) {
+        mCb->onError(Error::HW_UNAVAILABLE, 0);
     } else if (compared) {
         onAuthenticationFailedLocked();
     } else {
@@ -542,11 +549,16 @@ void Session::doEnrollAuth(Enrollment enrollment, ANativeWindow* preview,
             lastRemaining = result.remaining;
         }
     }
+    bool cameraFailed = camera.failed();
     camera.stop();
 
     if (!done) {
         auth.removeTemplate();
-        if (!error) error = cancelled() ? Error::CANCELED : Error::TIMEOUT;
+        if (!error) {
+            error = cancelled()    ? Error::CANCELED
+                    : cameraFailed ? Error::HW_UNAVAILABLE
+                                   : Error::TIMEOUT;
+        }
         mCb->onError(*error, 0);
         return;
     }
@@ -606,6 +618,7 @@ void Session::doAuthenticateAuth(const Enrollment& enrollment, const std::future
             break;
         }
     }
+    bool cameraFailed = camera.failed();
     camera.stop();
 
     if (matched) {
@@ -615,6 +628,8 @@ void Session::doAuthenticateAuth(const Enrollment& enrollment, const std::future
         mCb->onError(*error, 0);
     } else if (cancelled()) {
         mCb->onError(Error::CANCELED, 0);
+    } else if (cameraFailed) {
+        mCb->onError(Error::HW_UNAVAILABLE, 0);
     } else if (compared) {
         onAuthenticationFailedLocked();
     } else {
