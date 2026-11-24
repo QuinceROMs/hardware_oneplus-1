@@ -58,6 +58,10 @@ class CameraSource {
     ACaptureRequest* mRequest = nullptr;
     ACameraCaptureSession* mSession = nullptr;
 
+    // While the reader exists, only its thread uses this: each image is converted into it and then
+    // swapped with mFrame, so that frame buffers are reused.
+    std::vector<uint8_t> mSpare;
+
     std::mutex mMutex;
     std::condition_variable mCond;
     std::vector<uint8_t> mFrame;

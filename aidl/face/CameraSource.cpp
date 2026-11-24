@@ -74,15 +74,15 @@ void CameraSource::onImageAvailable(void* context, AImageReader* reader) {
     AImage* image = nullptr;
     if (AImageReader_acquireLatestImage(reader, &image) != AMEDIA_OK || !image) return;
 
-    std::vector<uint8_t> nv21;
-    bool ok = self->copyImage(image, &nv21);
+    bool ok = self->copyImage(image, &self->mSpare);
     AImage_delete(image);
     if (!ok) return;
 
-    if (self->mPreview) self->renderPreview(nv21);
+    if (self->mPreview) self->renderPreview(self->mSpare);
 
     std::lock_guard lock(self->mMutex);
-    self->mFrame = std::move(nv21);
+    // Takes back either the frame this one replaces or a buffer the caller is done with.
+    self->mFrame.swap(self->mSpare);
     self->mFrameAvailable = true;
     self->mCond.notify_all();
 }
@@ -273,6 +273,11 @@ void CameraSource::stop() {
         AImageReader_delete(mReader);
         mReader = nullptr;
     }
+    mSpare = std::vector<uint8_t>();
+    {
+        std::lock_guard lock(mMutex);
+        mFrame = std::vector<uint8_t>();
+    }
     if (mPreview) {
         ANativeWindow_release(mPreview);
         mPreview = nullptr;
@@ -294,7 +299,7 @@ bool CameraSource::nextFrame(std::vector<uint8_t>* nv21,
     }
 
     mFrameAvailable = false;
-    *nv21 = std::move(mFrame);
+    nv21->swap(mFrame);
     return true;
 }
 
@@ -328,6 +333,13 @@ bool CameraSource::copyImage(AImage* image, std::vector<uint8_t>* nv21) {
     }
 
     uint8_t* vu = dst + width * height;
+    if (uvPixelStride == 2 && u == v + 1) {
+        // The chroma planes are already interleaved in NV21 order.
+        for (int row = 0; row < height / 2; row++) {
+            memcpy(vu + row * width, v + row * uvStride, width);
+        }
+        return true;
+    }
     for (int row = 0; row < height / 2; row++) {
         const uint8_t* uRow = u + row * uvStride;
         const uint8_t* vRow = v + row * uvStride;
