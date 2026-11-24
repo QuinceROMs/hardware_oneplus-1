@@ -121,7 +121,7 @@ SensorProps SensorPropsInit(SensorProps props) {
 }
 }  // anonymous namespace
 
-extern "C" void
+extern "C" binder_status_t
 _ZNK4aidl7android8hardware10biometrics11fingerprint11SensorProps13writeToParcelEP7AParcel(
         SensorProps* thisptr, AParcel* parcel) {
     static auto props = SensorPropsInit(*thisptr);
@@ -130,5 +130,5 @@ _ZNK4aidl7android8hardware10biometrics11fingerprint11SensorProps13writeToParcelE
             dlsym(RTLD_NEXT, __func__));
 
     LOG(DEBUG) << "Original props=" << thisptr->toString() << ", new props=" << props.toString();
-    writeToParcel(&props, parcel);
+    return writeToParcel(&props, parcel);
 }
