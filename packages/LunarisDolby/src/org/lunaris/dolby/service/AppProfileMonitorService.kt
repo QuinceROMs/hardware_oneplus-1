@@ -44,6 +44,7 @@ class AppProfileMonitorService : Service() {
     private var pendingSwitchRunnable: Runnable? = null
     private var hasOriginalProfile = false
     private var lastProfileChangeTime: Long = 0
+    private var lastQueryTime: Long = 0
 
     private val checkForegroundAppRunnable = object : Runnable {
         override fun run() {
@@ -67,7 +68,10 @@ class AppProfileMonitorService : Service() {
                 captureOriginalProfile()
                 startMonitoring()
             }
-            ACTION_STOP_MONITORING -> stopMonitoring()
+            ACTION_STOP_MONITORING -> {
+                stopMonitoring()
+                stopSelf()
+            }
             else -> {
                 val prefs = getSharedPreferences("dolby_prefs", Context.MODE_PRIVATE)
                 if (prefs.getBoolean(PREF_MONITORING_ENABLED, false)) {
@@ -241,10 +245,16 @@ class AppProfileMonitorService : Service() {
         val usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
         val currentTime = System.currentTimeMillis()
         
-        val query = UsageEventsQuery.Builder(currentTime - 1000, currentTime)
+        // Query everything since the previous poll, otherwise switches that happen between
+        // polls are never seen. The lookback is capped for polls that were skipped, and the
+        // wall clock may have been set back since the previous poll.
+        val beginTime =
+            maxOf(lastQueryTime, currentTime - MAX_LOOKBACK).coerceIn(0L, currentTime)
+        val query = UsageEventsQuery.Builder(beginTime, currentTime)
             .setEventTypes(UsageEvents.Event.ACTIVITY_RESUMED)
             .build()
         val usageEvents = usageStatsManager.queryEvents(query) ?: return null
+        lastQueryTime = currentTime
         val event = UsageEvents.Event()
 
         var lastPackage: String? = null
@@ -282,6 +292,7 @@ class AppProfileMonitorService : Service() {
     companion object {
         private const val TAG = "AppProfileMonitor"
         private const val CHECK_INTERVAL = 2000L
+        private const val MAX_LOOKBACK = 60000L
         private const val SWITCH_DELAY = 300L
 
         private const val PREF_MONITORING_ENABLED = "app_profile_monitoring_enabled"
