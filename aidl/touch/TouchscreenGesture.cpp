@@ -11,6 +11,7 @@
 #include <android-base/strings.h>
 
 #include <OplusTouchConstants.h>
+#include <OplusTouchNode.h>
 #include <TouchscreenGestureConfig.h>
 
 #include <limits>
@@ -70,20 +71,19 @@ ndk::ScopedAStatus TouchscreenGesture::setGestureEnabled(const Gesture& gesture,
     if (mOplusTouch) {
         std::string tmp;
         int mask;
-        mOplusTouch->touchReadNodeFile(OplusTouchConstants::DEFAULT_TP_IC_ID,
-                                       OplusTouchConstants::DOUBLE_TAP_INDEP_NODE, &tmp);
-        if (!parseGestureMask(tmp, &mask)) {
+        if (!OplusTouchNode::Read(*mOplusTouch, OplusTouchConstants::DOUBLE_TAP_INDEP_NODE, &tmp) ||
+            !parseGestureMask(tmp, &mask)) {
             LOG(ERROR) << "Failed to read current AIDL gesture mask";
             return ndk::ScopedAStatus::fromExceptionCode(EX_UNSUPPORTED_OPERATION);
         }
         const int contents = updateMask(mask);
-        int aidl_return = 0;
-        mOplusTouch->touchWriteNodeFile(OplusTouchConstants::DEFAULT_TP_IC_ID,
-                                        OplusTouchConstants::DOUBLE_TAP_ENABLE_NODE, "1",
-                                        &aidl_return);
-        mOplusTouch->touchWriteNodeFile(OplusTouchConstants::DEFAULT_TP_IC_ID,
-                                        OplusTouchConstants::DOUBLE_TAP_INDEP_NODE,
-                                        std::to_string(contents), &aidl_return);
+        if (!OplusTouchNode::Write(*mOplusTouch, OplusTouchConstants::DOUBLE_TAP_ENABLE_NODE,
+                                   "1") ||
+            !OplusTouchNode::Write(*mOplusTouch, OplusTouchConstants::DOUBLE_TAP_INDEP_NODE,
+                                   std::to_string(contents))) {
+            LOG(ERROR) << "Failed to write AIDL gesture mask";
+            return ndk::ScopedAStatus::fromExceptionCode(EX_UNSUPPORTED_OPERATION);
+        }
     } else {
         for (const auto& node : ::android::base::Split(GESTURE_ENABLE_INDEP_NODES, " ")) {
             if (node.empty()) continue;

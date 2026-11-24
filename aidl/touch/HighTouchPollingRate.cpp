@@ -11,6 +11,7 @@
 #include <android-base/logging.h>
 
 #include <OplusTouchConstants.h>
+#include <OplusTouchNode.h>
 
 using ::android::base::ReadFileToString;
 using ::android::base::WriteStringToFile;
@@ -33,9 +34,7 @@ ndk::ScopedAStatus HighTouchPollingRate::getEnabled(bool* _aidl_return) {
     std::string value;
 
     if (mOplusTouch) {
-        ndk::ScopedAStatus status = mOplusTouch->touchReadNodeFile(
-                OplusTouchConstants::DEFAULT_TP_IC_ID, HTPR_ENABLE_NODE, &value);
-        if (!status.isOk()) {
+        if (!OplusTouchNode::Read(*mOplusTouch, HTPR_ENABLE_NODE, &value)) {
             LOG(ERROR) << "Failed to read current AIDL HighTouchPollingRate state";
             return ndk::ScopedAStatus::fromExceptionCode(EX_UNSUPPORTED_OPERATION);
         }
@@ -50,12 +49,8 @@ ndk::ScopedAStatus HighTouchPollingRate::getEnabled(bool* _aidl_return) {
 
 ndk::ScopedAStatus HighTouchPollingRate::setEnabled(bool enable) {
     if (mOplusTouch) {
-        int aidl_return = 0;
-
-        ndk::ScopedAStatus status = mOplusTouch->touchWriteNodeFile(
-                OplusTouchConstants::DEFAULT_TP_IC_ID, HTPR_ENABLE_NODE,
-                enable ? HTPR_ENABLE_VALUE : "0", &aidl_return);
-        if (!status.isOk() || aidl_return < 0) {
+        if (!OplusTouchNode::Write(*mOplusTouch, HTPR_ENABLE_NODE,
+                                   enable ? HTPR_ENABLE_VALUE : "0")) {
             LOG(ERROR) << "Failed to write AIDL HighTouchPollingRate state";
             return ndk::ScopedAStatus::fromExceptionCode(EX_UNSUPPORTED_OPERATION);
         }

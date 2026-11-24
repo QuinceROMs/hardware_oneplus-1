@@ -11,6 +11,7 @@
 #include <android-base/logging.h>
 
 #include <OplusTouchConstants.h>
+#include <OplusTouchNode.h>
 
 using ::android::base::ReadFileToString;
 using ::android::base::WriteStringToFile;
@@ -33,23 +34,27 @@ ndk::ScopedAStatus GloveMode::getEnabled(bool* _aidl_return) {
     std::string value;
 
     if (mOplusTouch) {
-        mOplusTouch->touchReadNodeFile(OplusTouchConstants::DEFAULT_TP_IC_ID,
-                                       OplusTouchConstants::GLOVE_MODE_ENABLE_NODE, &value);
+        if (!OplusTouchNode::Read(*mOplusTouch, OplusTouchConstants::GLOVE_MODE_ENABLE_NODE,
+                                  &value)) {
+            LOG(ERROR) << "Failed to read current AIDL GloveMode state";
+            return ndk::ScopedAStatus::fromExceptionCode(EX_UNSUPPORTED_OPERATION);
+        }
     } else if (!ReadFileToString(kGloveModeEnablePath, &value)) {
         LOG(ERROR) << "Failed to read current GloveMode state";
         return ndk::ScopedAStatus::fromExceptionCode(EX_UNSUPPORTED_OPERATION);
     }
 
-    *_aidl_return = value[0] != '0';
+    *_aidl_return = !value.empty() && value[0] != '0';
     return ndk::ScopedAStatus::ok();
 }
 
 ndk::ScopedAStatus GloveMode::setEnabled(bool enable) {
     if (mOplusTouch) {
-        int aidl_return = 0;
-        mOplusTouch->touchWriteNodeFile(OplusTouchConstants::DEFAULT_TP_IC_ID,
-                                        OplusTouchConstants::GLOVE_MODE_ENABLE_NODE,
-                                        enable ? "1" : "0", &aidl_return);
+        if (!OplusTouchNode::Write(*mOplusTouch, OplusTouchConstants::GLOVE_MODE_ENABLE_NODE,
+                                   enable ? "1" : "0")) {
+            LOG(ERROR) << "Failed to write AIDL GloveMode state";
+            return ndk::ScopedAStatus::fromExceptionCode(EX_UNSUPPORTED_OPERATION);
+        }
     } else if (!WriteStringToFile(enable ? "1" : "0", kGloveModeEnablePath, true)) {
         LOG(ERROR) << "Failed to write GloveMode state";
         return ndk::ScopedAStatus::fromExceptionCode(EX_UNSUPPORTED_OPERATION);
