@@ -186,6 +186,7 @@ bool AuthEngine::initLocked() {
         return false;
     }
 
+    mAuthInitCalled = true;
     ret = authInit(mUseTee ? kTeeTemplateDir : kTemplateDir, 0);
     if (ret != 0) {
         LOG(ERROR) << "Failed to initialize st_auth: " << ret;
@@ -195,8 +196,9 @@ bool AuthEngine::initLocked() {
 }
 
 void AuthEngine::deinit() {
-    if (mLib) authDeinit();
+    if (mAuthInitCalled) authDeinit();
     if (mUseTee) AuthTee::close();
+    mAuthInitCalled = false;
     mInitialized = false;
 }
 

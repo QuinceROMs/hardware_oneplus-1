@@ -50,6 +50,8 @@ class AuthEngine {
     const bool mUseTee;
     std::optional<bool> mAvailable;
     bool mInitialized = false;
+    // st_auth_deinit is only called after st_auth_init, including one that failed.
+    bool mAuthInitCalled = false;
     void* mLib = nullptr;
     int mConfig = 0;
     int mAccepted = 0;
