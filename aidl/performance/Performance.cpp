@@ -3,11 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#define LOG_TAG "vendor.oplus.hardware.performance-service"
+
 #include "Performance.h"
 
 #include <android-base/logging.h>
-
-#define LOG_TAG "vendor.oplus.hardware.performance-service"
 
 namespace aidl {
 namespace vendor {
