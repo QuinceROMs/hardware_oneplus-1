@@ -7,39 +7,14 @@
 
 #include <android-base/file.h>
 #include <android-base/logging.h>
-#include <android-base/parseint.h>
 #include <android-base/strings.h>
 
 #include <OplusTouchConstants.h>
 #include <OplusTouchNode.h>
 #include <TouchscreenGestureConfig.h>
 
-#include <limits>
-
-using ::android::base::ParseUint;
 using ::android::base::ReadFileToString;
-using ::android::base::StartsWithIgnoreCase;
-using ::android::base::Trim;
 using ::android::base::WriteStringToFile;
-
-namespace {
-
-// The touch drivers print the mask with "%x", so without a 0x prefix, and
-// print nothing while no touch IC is bound.
-bool parseGestureMask(const std::string& contents, int* mask) {
-    std::string hex = Trim(contents);
-    if (!StartsWithIgnoreCase(hex, "0x")) {
-        hex = "0x" + hex;
-    }
-    unsigned int value;
-    if (!ParseUint(hex, &value, static_cast<unsigned int>(std::numeric_limits<int>::max()))) {
-        return false;
-    }
-    *mask = static_cast<int>(value);
-    return true;
-}
-
-}  // anonymous namespace
 
 namespace aidl {
 namespace vendor {
@@ -63,25 +38,11 @@ ndk::ScopedAStatus TouchscreenGesture::getSupportedGestures(std::vector<Gesture>
 }
 
 ndk::ScopedAStatus TouchscreenGesture::setGestureEnabled(const Gesture& gesture, bool enabled) {
-    const auto updateMask = [&](int contents) {
-        const int bit = 1 << (gesture.keycode - kGestureStartKey);
-        return enabled ? contents | bit : contents & ~bit;
-    };
+    const int bit = 1 << (gesture.keycode - kGestureStartKey);
 
     if (mOplusTouch) {
-        std::string tmp;
-        int mask;
-        if (!OplusTouchNode::Read(*mOplusTouch, OplusTouchConstants::DOUBLE_TAP_INDEP_NODE, &tmp) ||
-            !parseGestureMask(tmp, &mask)) {
-            LOG(ERROR) << "Failed to read current AIDL gesture mask";
-            return ndk::ScopedAStatus::fromExceptionCode(EX_UNSUPPORTED_OPERATION);
-        }
-        const int contents = updateMask(mask);
-        if (!OplusTouchNode::Write(*mOplusTouch, OplusTouchConstants::DOUBLE_TAP_ENABLE_NODE,
-                                   "1") ||
-            !OplusTouchNode::Write(*mOplusTouch, OplusTouchConstants::DOUBLE_TAP_INDEP_NODE,
-                                   std::to_string(contents))) {
-            LOG(ERROR) << "Failed to write AIDL gesture mask";
+        if (!OplusTouchNode::UpdateGestureMask(*mOplusTouch, bit, enabled)) {
+            LOG(ERROR) << "Failed to update AIDL gesture mask";
             return ndk::ScopedAStatus::fromExceptionCode(EX_UNSUPPORTED_OPERATION);
         }
     } else {
@@ -90,11 +51,11 @@ ndk::ScopedAStatus TouchscreenGesture::setGestureEnabled(const Gesture& gesture,
 
             std::string tmp;
             int mask;
-            if (!ReadFileToString(node, &tmp) || !parseGestureMask(tmp, &mask)) {
+            if (!ReadFileToString(node, &tmp) || !OplusTouchNode::ParseMask(tmp, &mask)) {
                 LOG(ERROR) << "Failed to read current gesture mask from " << node;
                 return ndk::ScopedAStatus::fromExceptionCode(EX_UNSUPPORTED_OPERATION);
             }
-            const int contents = updateMask(mask);
+            const int contents = OplusTouchNode::SetMaskBit(mask, bit, enabled);
             if (!WriteStringToFile(std::to_string(contents), node, true)) {
                 return ndk::ScopedAStatus::fromExceptionCode(EX_UNSUPPORTED_OPERATION);
             }

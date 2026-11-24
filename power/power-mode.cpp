@@ -11,6 +11,7 @@
 #include <android/binder_manager.h>
 
 #include <OplusTouchConstants.h>
+#include <OplusTouchNode.h>
 
 #include "charger-cool-down.h"
 
@@ -40,31 +41,16 @@ bool setDeviceSpecificMode(Mode type, bool enabled) {
     switch (type) {
 #ifndef TAP_TO_WAKE_NODE
         case Mode::DOUBLE_TAP_TO_WAKE: {
-            std::string tmp;
-            int contents = 0;
-
             const std::string instance = std::string() + IOplusTouch::descriptor + "/default";
             std::shared_ptr<IOplusTouch> oplusTouch = IOplusTouch::fromBinder(
                     ndk::SpAIBinder(AServiceManager_waitForService(instance.c_str())));
             LOG(INFO) << "Power mode: " << toString(type) << " isDoubleTapEnabled: " << enabled;
 
-            oplusTouch->touchReadNodeFile(OplusTouchConstants::DEFAULT_TP_IC_ID,
-                                          OplusTouchConstants::DOUBLE_TAP_INDEP_NODE, &tmp);
-            contents = std::stoi(tmp, nullptr, 16);
-
-            if (enabled) {
-                contents |= OplusTouchConstants::DOUBLE_TAP_GESTURE;
-            } else {
-                contents &= ~OplusTouchConstants::DOUBLE_TAP_GESTURE;
+            if (!oplusTouch ||
+                !OplusTouchNode::UpdateGestureMask(
+                        *oplusTouch, OplusTouchConstants::DOUBLE_TAP_GESTURE, enabled)) {
+                LOG(ERROR) << "Failed to update the double tap gesture mask";
             }
-
-            int aidl_return = 0;
-            oplusTouch->touchWriteNodeFile(OplusTouchConstants::DEFAULT_TP_IC_ID,
-                                           OplusTouchConstants::DOUBLE_TAP_ENABLE_NODE, "1",
-                                           &aidl_return);
-            oplusTouch->touchWriteNodeFile(OplusTouchConstants::DEFAULT_TP_IC_ID,
-                                           OplusTouchConstants::DOUBLE_TAP_INDEP_NODE,
-                                           std::to_string(contents), &aidl_return);
             return true;
         }
 #endif
