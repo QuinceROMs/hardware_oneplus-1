@@ -319,12 +319,19 @@ bool CameraSource::copyImage(AImage* image, std::vector<uint8_t>* nv21) {
     int32_t yStride, uvStride, uvPixelStride;
     if (AImage_getPlaneData(image, 0, &y, &yLen) != AMEDIA_OK ||
         AImage_getPlaneData(image, 1, &u, &uLen) != AMEDIA_OK ||
-        AImage_getPlaneData(image, 2, &v, &vLen) != AMEDIA_OK) {
+        AImage_getPlaneData(image, 2, &v, &vLen) != AMEDIA_OK ||
+        AImage_getPlaneRowStride(image, 0, &yStride) != AMEDIA_OK ||
+        AImage_getPlaneRowStride(image, 1, &uvStride) != AMEDIA_OK ||
+        AImage_getPlanePixelStride(image, 1, &uvPixelStride) != AMEDIA_OK) {
         return false;
     }
-    AImage_getPlaneRowStride(image, 0, &yStride);
-    AImage_getPlaneRowStride(image, 1, &uvStride);
-    AImage_getPlanePixelStride(image, 1, &uvPixelStride);
+    // The camera HAL fills these planes, so the rows copied below must fit in what it reports.
+    const int64_t lastChroma =
+            int64_t(height / 2 - 1) * uvStride + int64_t(width / 2 - 1) * uvPixelStride;
+    if (yStride < width || uvPixelStride < 1 || int64_t(height - 1) * yStride + width > yLen ||
+        lastChroma >= uLen || lastChroma >= vLen) {
+        return false;
+    }
 
     nv21->resize(width * height * 3 / 2);
     uint8_t* dst = nv21->data();
