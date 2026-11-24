@@ -89,6 +89,14 @@ Sensor::Sensor(int32_t sensorHandle, ISensorsEventCallback* callback)
 }
 
 Sensor::~Sensor() {
+    stopThread();
+}
+
+void Sensor::start() {
+    mRunThread = std::thread(startThread, this);
+}
+
+void Sensor::stopThread() {
     // Ensure that lock is unlocked before calling mRunThread.join() or a
     // deadlock will occur.
     {
@@ -100,10 +108,6 @@ Sensor::~Sensor() {
     if (mRunThread.joinable()) {
         mRunThread.join();
     }
-}
-
-void Sensor::start() {
-    mRunThread = std::thread(startThread, this);
 }
 
 const SensorInfo& Sensor::getSensorInfo() const {
@@ -272,7 +276,15 @@ UdfpsSensor::UdfpsSensor(int32_t sensorHandle, ISensorsEventCallback* callback)
 }
 
 UdfpsSensor::~UdfpsSensor() {
+    // The thread runs UdfpsSensor::run() on the fds below and may be blocked in poll(), which
+    // the condition variable in ~Sensor() cannot wake, so it has to be stopped here.
+    mStopThread = true;
     interruptPoll();
+    stopThread();
+
+    if (mPollFd >= 0) close(mPollFd);
+    if (mWaitPipeFd[0] >= 0) close(mWaitPipeFd[0]);
+    if (mWaitPipeFd[1] >= 0) close(mWaitPipeFd[1]);
 }
 
 void UdfpsSensor::activate(bool enable) {
