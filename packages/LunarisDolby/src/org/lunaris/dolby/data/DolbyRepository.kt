@@ -101,6 +101,11 @@ class DolbyRepository private constructor(private val context: Context) {
         }
     }
 
+    /** Recreates the handle if it lost control, which also pushes the saved state to it. */
+    fun ensureEffect() {
+        isEffectAvailable()
+    }
+
     fun isEffectAvailable(): Boolean =
         try {
             requireEffect()
@@ -163,10 +168,12 @@ class DolbyRepository private constructor(private val context: Context) {
 
     fun applySavedState() {
         // Right after boot the DAP effect can reject parameters (INVALID_OPERATION) before the
-        // audio HAL has set it up. The service calls this again on every playback start and
-        // output device change, so a failed attempt is only logged.
+        // audio HAL has set it up. The service calls this again when playback starts after
+        // silence and when the output changes, so a failed attempt is only logged.
         try {
+            val previous = dolbyEffect
             val effect = requireEffect()
+            if (effect !== previous) return // A new handle has just been given the saved state.
             val enabled = defaultPrefs.getBoolean(DolbyConstants.PREF_ENABLE, false)
             effect.dsOn = enabled
             if (enabled) {

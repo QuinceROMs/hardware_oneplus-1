@@ -19,7 +19,6 @@ import android.content.SharedPreferences
 import android.os.IBinder
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import org.lunaris.dolby.DolbyConstants
@@ -37,7 +36,7 @@ class DolbyEffectService : Service() {
         get() = dolbyPrefs.getBoolean(DolbyConstants.PREF_DEVICE_STATE_MEMORY, false)
     private val handler = Handler(Looper.getMainLooper())
     private val halScope = CoroutineScope(SupervisorJob() + DolbyDispatchers.hal)
-    private var applyJob: Job? = null
+    private var isPlaybackActive = false
     private lateinit var repository: DolbyRepository
     private lateinit var deviceStateManager: DeviceStateManager
     private var previousActiveDevice: AudioDeviceInfo? = null
@@ -60,8 +59,13 @@ class DolbyEffectService : Service() {
     private val playbackCallback = object : AudioManager.AudioPlaybackCallback() {
         override fun onPlaybackConfigChanged(configs: MutableList<AudioPlaybackConfiguration>?) {
             val isActive = configs?.any { it.isActive } == true
-            if (isActive && applyJob?.isActive != true) {
-                applyJob = halScope.launch { repository.applySavedState() }
+            val started = isActive && !isPlaybackActive
+            isPlaybackActive = isActive
+            if (!isActive) return
+            // Other changes during playback only need a lost handle recreated, e.g. after an
+            // audioserver restart, which pushes the saved state to the new one.
+            halScope.launch {
+                if (started) repository.applySavedState() else repository.ensureEffect()
             }
         }
     }
