@@ -7,6 +7,8 @@
 
 #include <aidl/vendor/lineage/livedisplay/BnAntiFlicker.h>
 
+#include <atomic>
+
 namespace aidl {
 namespace vendor {
 namespace lineage {
@@ -21,7 +23,13 @@ class AntiFlicker : public BnAntiFlicker {
     ndk::ScopedAStatus setEnabled(bool enabled) override;
 
   private:
+    static constexpr int kNoVariant = -1;
+
+    int readState(unsigned int* value);
+
     int mOplusDisplayFd;
+    std::atomic<int> mVariant = kNoVariant;
+    std::atomic<unsigned int> mWorkedVariants = 0;
 };
 
 }  // namespace livedisplay
