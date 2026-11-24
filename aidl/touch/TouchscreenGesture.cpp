@@ -6,14 +6,39 @@
 #define LOG_TAG "vendor.lineage.touch-service.oplus"
 
 #include <android-base/file.h>
+#include <android-base/logging.h>
+#include <android-base/parseint.h>
 #include <android-base/strings.h>
 
 #include <OplusTouchConstants.h>
 #include <TouchscreenGestureConfig.h>
 
+#include <limits>
+
+using ::android::base::ParseUint;
 using ::android::base::ReadFileToString;
+using ::android::base::StartsWithIgnoreCase;
 using ::android::base::Trim;
 using ::android::base::WriteStringToFile;
+
+namespace {
+
+// The touch drivers print the mask with "%x", so without a 0x prefix, and
+// print nothing while no touch IC is bound.
+bool parseGestureMask(const std::string& contents, int* mask) {
+    std::string hex = Trim(contents);
+    if (!StartsWithIgnoreCase(hex, "0x")) {
+        hex = "0x" + hex;
+    }
+    unsigned int value;
+    if (!ParseUint(hex, &value, static_cast<unsigned int>(std::numeric_limits<int>::max()))) {
+        return false;
+    }
+    *mask = static_cast<int>(value);
+    return true;
+}
+
+}  // anonymous namespace
 
 namespace aidl {
 namespace vendor {
@@ -44,9 +69,14 @@ ndk::ScopedAStatus TouchscreenGesture::setGestureEnabled(const Gesture& gesture,
 
     if (mOplusTouch) {
         std::string tmp;
+        int mask;
         mOplusTouch->touchReadNodeFile(OplusTouchConstants::DEFAULT_TP_IC_ID,
                                        OplusTouchConstants::DOUBLE_TAP_INDEP_NODE, &tmp);
-        const int contents = updateMask(std::stoi(tmp, nullptr, 16));
+        if (!parseGestureMask(tmp, &mask)) {
+            LOG(ERROR) << "Failed to read current AIDL gesture mask";
+            return ndk::ScopedAStatus::fromExceptionCode(EX_UNSUPPORTED_OPERATION);
+        }
+        const int contents = updateMask(mask);
         int aidl_return = 0;
         mOplusTouch->touchWriteNodeFile(OplusTouchConstants::DEFAULT_TP_IC_ID,
                                         OplusTouchConstants::DOUBLE_TAP_ENABLE_NODE, "1",
@@ -59,10 +89,12 @@ ndk::ScopedAStatus TouchscreenGesture::setGestureEnabled(const Gesture& gesture,
             if (node.empty()) continue;
 
             std::string tmp;
-            if (!ReadFileToString(node, &tmp)) {
+            int mask;
+            if (!ReadFileToString(node, &tmp) || !parseGestureMask(tmp, &mask)) {
+                LOG(ERROR) << "Failed to read current gesture mask from " << node;
                 return ndk::ScopedAStatus::fromExceptionCode(EX_UNSUPPORTED_OPERATION);
             }
-            const int contents = updateMask(std::stoi(Trim(tmp), nullptr, 16));
+            const int contents = updateMask(mask);
             if (!WriteStringToFile(std::to_string(contents), node, true)) {
                 return ndk::ScopedAStatus::fromExceptionCode(EX_UNSUPPORTED_OPERATION);
             }
