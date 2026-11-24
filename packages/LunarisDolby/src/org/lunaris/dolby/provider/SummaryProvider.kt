@@ -10,11 +10,12 @@ package org.lunaris.dolby.provider
 
 import android.content.ContentProvider
 import android.content.ContentValues
+import android.content.Context
 import android.database.Cursor
 import android.net.Uri
 import android.os.Bundle
+import org.lunaris.dolby.DolbyConstants
 import org.lunaris.dolby.R
-import org.lunaris.dolby.data.DolbyRepository
 import org.lunaris.dolby.domain.models.dolbyProfileName
 
 private const val KEY_DOLBY = "dolby"
@@ -55,15 +56,18 @@ class SummaryProvider : ContentProvider() {
         selectionArgs: Array<String>?
     ): Int = 0
 
+    // Runs on a binder thread, so it reads the saved state instead of the effect, which is only
+    // accessed on DolbyDispatchers.hal.
     private fun getDolbySummary(): String {
         val context = context ?: return ""
-        val repository = DolbyRepository(context)
-        
-        if (!repository.getDolbyEnabled()) {
+        val prefs = context.getSharedPreferences("dolby_prefs", Context.MODE_PRIVATE)
+
+        if (!prefs.getBoolean(DolbyConstants.PREF_ENABLE, false)) {
             return context.getString(R.string.dolby_off)
         }
-        
-        val profileName = dolbyProfileName(context, repository.getCurrentProfile())
+
+        val profile = prefs.getString(DolbyConstants.PREF_PROFILE, null)?.toIntOrNull() ?: 0
+        val profileName = dolbyProfileName(context, profile)
         return context.getString(R.string.dolby_on_with_profile, profileName)
     }
 }
