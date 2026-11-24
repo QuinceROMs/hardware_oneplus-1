@@ -75,6 +75,10 @@ bool BiometricsFingerprint::init() {
 
 Return<uint64_t> BiometricsFingerprint::setNotify(
         const sp<V2_1::IBiometricsFingerprintClientCallback>& clientCallback) {
+    // The 2.1 callbacks below dereference mClientCallback without a check.
+    if (clientCallback == nullptr) {
+        return 0;
+    }
     auto castResult = V2_2::IBiometricsFingerprintClientCallback::castFrom(clientCallback, true);
     if (!castResult.isOk()) {
         return ::android::hardware::details::StatusOf<
