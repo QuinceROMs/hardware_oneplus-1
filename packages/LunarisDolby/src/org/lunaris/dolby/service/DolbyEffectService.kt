@@ -20,6 +20,7 @@ import android.os.IBinder
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import org.lunaris.dolby.DolbyConstants
 import org.lunaris.dolby.data.DeviceStateManager
@@ -173,15 +174,7 @@ class DolbyEffectService : Service() {
         audioManager.unregisterAudioDeviceCallback(audioDeviceCallback)
         audioManager.unregisterAudioPlaybackCallback(playbackCallback)
         handler.removeCallbacksAndMessages(null)
-        // halScope is not cancelled: work it already queued, such as restoring the snapshot of a
-        // new output, has to run before the snapshot below is taken. With the callbacks gone
-        // nothing queues more.
-        if (isDeviceStateMemoryEnabled) {
-            previousActiveDevice?.let { device ->
-                val key = deviceStateManager.deviceKey(device)
-                halScope.launch { deviceStateManager.saveSnapshot(key, repository) }
-            }
-        }
+        halScope.cancel()
         Log.d(TAG, "Dolby effect service destroyed")
     }
 
