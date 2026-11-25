@@ -98,15 +98,20 @@ class DolbyEffectService : Service() {
         val memoryEnabled = isDeviceStateMemoryEnabled
         previousActiveDevice = newDevice
 
+        // Every added or removed device ends up here, inputs and outputs that are not routed
+        // included, as does the initial callback on registration. If the routed output did not
+        // change there is nothing to save or restore.
+        val oldKey = oldDevice?.let { deviceStateManager.deviceKey(it) }
+        val newKey = newDevice?.let { deviceStateManager.deviceKey(it) }
+        if (oldKey == newKey) return
+
         halScope.launch {
-            if (oldDevice != null && memoryEnabled) {
-                val oldKey = deviceStateManager.deviceKey(oldDevice)
+            if (oldKey != null && memoryEnabled) {
                 Log.d(TAG, "Saving snapshot for previous device: $oldKey")
                 deviceStateManager.saveSnapshot(oldKey, repository)
             }
 
-            if (newDevice != null) {
-                val newKey = deviceStateManager.deviceKey(newDevice)
+            if (newKey != null) {
                 if (memoryEnabled) {
                     Log.d(TAG, "Restoring snapshot for new device: $newKey")
                     val restored = deviceStateManager.restoreSnapshot(newKey, repository)
