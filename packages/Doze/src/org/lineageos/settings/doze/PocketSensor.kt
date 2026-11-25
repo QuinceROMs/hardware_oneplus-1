@@ -56,6 +56,11 @@ class PocketSensor(
         }
     }
 
+    fun destroy() {
+        disable()
+        executorService.shutdown()
+    }
+
     companion object {
         private const val TAG = "PocketSensor"
         private const val DEBUG = false

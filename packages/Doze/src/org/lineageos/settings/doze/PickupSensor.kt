@@ -71,6 +71,11 @@ class PickupSensor(
         }
     }
 
+    fun destroy() {
+        disable()
+        executorService.shutdown()
+    }
+
     companion object {
         private const val TAG = "PickupSensor"
         private const val DEBUG = false

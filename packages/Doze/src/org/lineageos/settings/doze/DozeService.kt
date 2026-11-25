@@ -56,8 +56,8 @@ class DozeService : Service() {
         super.onDestroy()
 
         unregisterReceiver(screenStateReceiver)
-        pickupSensor.disable()
-        pocketSensor.disable()
+        pickupSensor.destroy()
+        pocketSensor.destroy()
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
