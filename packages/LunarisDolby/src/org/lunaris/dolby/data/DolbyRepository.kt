@@ -188,7 +188,7 @@ class DolbyRepository private constructor(private val context: Context) {
         val routedDevice = try {
             audioManager.getDevicesForAttributes(ATTRIBUTES_MEDIA).firstOrNull()
         } catch (e: Exception) {
-            DolbyConstants.dlog(TAG, "Error getting active media route: ${e.message}")
+            Log.w(TAG, "Failed to get active media route", e)
             null
         } ?: return null
 
@@ -201,6 +201,10 @@ class DolbyRepository private constructor(private val context: Context) {
                 (routedAddress.isEmpty() || device.address == routedAddress)
         } ?: outputs.firstOrNull { device ->
             device.isSink && device.type == routedDevice.type
+        } ?: run {
+            Log.w(TAG, "Unable to map active media route: " +
+                "type=${routedDevice.type}, address=${routedDevice.address}")
+            null
         }
     }
 

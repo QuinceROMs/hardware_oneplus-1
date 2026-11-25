@@ -8,7 +8,6 @@ package org.lunaris.dolby.service
 import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.media.AudioAttributes
 import android.media.AudioDeviceCallback
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
@@ -75,7 +74,7 @@ class DolbyEffectService : Service() {
         super.onCreate()
         repository = DolbyRepository.getInstance(this)
         deviceStateManager = DeviceStateManager(this)
-        val currentDevice = getCurrentOutputDevice()
+        val currentDevice = repository.getCurrentOutputDevice()
         previousActiveDevice = currentDevice
         val memoryEnabled = isDeviceStateMemoryEnabled
         halScope.launch {
@@ -91,7 +90,7 @@ class DolbyEffectService : Service() {
     }
 
     private fun handleDeviceChange() {
-        val newDevice = getCurrentOutputDevice()
+        val newDevice = repository.getCurrentOutputDevice()
         val oldDevice = previousActiveDevice
         val memoryEnabled = isDeviceStateMemoryEnabled
         previousActiveDevice = newDevice
@@ -111,36 +110,6 @@ class DolbyEffectService : Service() {
                 deviceStateManager.switchTo(newKey)
             }
             repository.applySavedState()
-        }
-    }
-
-    private fun getCurrentOutputDevice(): AudioDeviceInfo? {
-        val routedDevice = try {
-            audioManager
-                .getDevicesForAttributes(ATTRIBUTES_MEDIA)
-                .firstOrNull()
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to get active media route", e)
-            null
-        } ?: return null
-
-        val outputs = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
-        val routedAddress = routedDevice.address.orEmpty()
-
-        return outputs.firstOrNull { device ->
-            device.isSink &&
-                device.type == routedDevice.type &&
-                (routedAddress.isEmpty() || device.address == routedAddress)
-        } ?: outputs.firstOrNull { device ->
-            device.isSink && device.type == routedDevice.type
-        }.also { device ->
-            if (device == null) {
-                Log.w(
-                    TAG,
-                    "Unable to map active media route: " +
-                        "type=${routedDevice.type}, address=${routedDevice.address}"
-                )
-            }
         }
     }
 
@@ -165,11 +134,6 @@ class DolbyEffectService : Service() {
 
     companion object {
         private const val TAG = "DolbyEffectService"
-
-        private val ATTRIBUTES_MEDIA = AudioAttributes.Builder()
-            .setUsage(AudioAttributes.USAGE_MEDIA)
-            .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-            .build()
 
         private fun shouldRun(context: Context): Boolean {
             val prefs = context.getSharedPreferences("dolby_prefs", Context.MODE_PRIVATE)
