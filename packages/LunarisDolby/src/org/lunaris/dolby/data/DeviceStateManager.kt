@@ -26,15 +26,16 @@ class DeviceStateManager(private val context: Context) {
                 "bt_${addr.replace(":", "_")}"
             }
             AudioDeviceInfo.TYPE_WIRED_HEADPHONES,
-            AudioDeviceInfo.TYPE_WIRED_HEADSET,
+            AudioDeviceInfo.TYPE_WIRED_HEADSET -> DEVICE_WIRED
             AudioDeviceInfo.TYPE_USB_HEADSET,
-            AudioDeviceInfo.TYPE_USB_DEVICE -> "wired_headphones"
+            AudioDeviceInfo.TYPE_USB_DEVICE -> DEVICE_USB
             AudioDeviceInfo.TYPE_BUILTIN_SPEAKER -> "builtin_speaker"
             else -> "device_type_${device.type}"
         }
     }
 
     fun saveSnapshot(deviceKey: String, repository: DolbyRepository) {
+        splitLegacyUsbSnapshot()
         // Without the effect the getters return defaults, which would replace the stored state.
         if (!repository.isEffectAvailable()) {
             DolbyConstants.dlog(TAG, "Effect unavailable, not saving snapshot for device=$deviceKey")
@@ -84,6 +85,7 @@ class DeviceStateManager(private val context: Context) {
     }
 
     fun restoreSnapshot(deviceKey: String, repository: DolbyRepository): Boolean {
+        splitLegacyUsbSnapshot()
         val prefs = getDevicePrefs(deviceKey)
 
         if (!prefs.contains(KEY_VERSION)) {
@@ -190,10 +192,41 @@ class DeviceStateManager(private val context: Context) {
     private fun getDevicePrefs(deviceKey: String): SharedPreferences =
         context.getSharedPreferences("device_state_$deviceKey", Context.MODE_PRIVATE)
 
+    // USB outputs used to share the wired snapshot with the headphone jack, so it holds the state
+    // of whichever of them was used last. Give the USB output a copy once, so neither loses what
+    // it restored before; from then on each keeps its own.
+    private fun splitLegacyUsbSnapshot() {
+        val dolbyPrefs = context.getSharedPreferences("dolby_prefs", Context.MODE_PRIVATE)
+        if (dolbyPrefs.getBoolean(PREF_USB_SNAPSHOT_SPLIT, false)) return
+
+        val wired = getDevicePrefs(DEVICE_WIRED)
+        val usb = getDevicePrefs(DEVICE_USB)
+        if (wired.contains(KEY_VERSION) && !usb.contains(KEY_VERSION)) {
+            val editor = usb.edit()
+            wired.all.forEach { (key, value) ->
+                when (value) {
+                    is Boolean -> editor.putBoolean(key, value)
+                    is Int -> editor.putInt(key, value)
+                    is Long -> editor.putLong(key, value)
+                    is Float -> editor.putFloat(key, value)
+                    is String -> editor.putString(key, value)
+                    is Set<*> -> editor.putStringSet(key, value.filterIsInstance<String>().toSet())
+                }
+            }
+            editor.apply()
+            DolbyConstants.dlog(TAG, "Copied the wired snapshot to $DEVICE_USB")
+        }
+        dolbyPrefs.edit().putBoolean(PREF_USB_SNAPSHOT_SPLIT, true).apply()
+    }
+
     companion object {
         private const val TAG = "DeviceStateManager"
 
         const val SNAPSHOT_VERSION = 1
+
+        private const val DEVICE_WIRED = "wired_headphones"
+        private const val DEVICE_USB = "usb_audio"
+        private const val PREF_USB_SNAPSHOT_SPLIT = "device_state_usb_split"
 
         private const val KEY_VERSION = "snapshot_version"
         private const val KEY_DOLBY_ENABLED = "enabled"
