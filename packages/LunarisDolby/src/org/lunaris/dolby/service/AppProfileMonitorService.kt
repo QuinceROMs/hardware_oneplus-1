@@ -20,6 +20,7 @@ import android.os.HandlerThread
 import android.os.IBinder
 import android.os.Looper
 import android.os.PowerManager
+import android.os.UserManager
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
@@ -40,6 +41,7 @@ class AppProfileMonitorService : Service() {
     private lateinit var dolbyRepository: DolbyRepository
     private lateinit var audioManager: AudioManager
     private lateinit var powerManager: PowerManager
+    private lateinit var userManager: UserManager
     private lateinit var monitorThread: HandlerThread
     // The polls, the delayed switches and the screen state receiver run here, so the state
     // below is only touched on this thread.
@@ -78,6 +80,7 @@ class AppProfileMonitorService : Service() {
         dolbyRepository = DolbyRepository.getInstance(this)
         audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
         powerManager = getSystemService(PowerManager::class.java)
+        userManager = getSystemService(UserManager::class.java)
         monitorThread = HandlerThread(TAG).apply { start() }
         monitorHandler = Handler(monitorThread.looper)
     }
@@ -238,6 +241,9 @@ class AppProfileMonitorService : Service() {
     }
 
     private fun getForegroundPackage(): String? {
+        // Usage events are only kept for unlocked users; before that every query fails and
+        // logs a warning in system_server.
+        if (!userManager.isUserUnlocked) return null
         val usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
         val currentTime = System.currentTimeMillis()
         
