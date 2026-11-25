@@ -7,10 +7,11 @@
 
 #include <android-base/logging.h>
 
+#include <algorithm>
+
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <pthread.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -19,51 +20,72 @@ namespace vendor::oplus::hardware::cameraMDM::implementation {
 namespace {
 
 constexpr char kWatermarkPrefix[] = "watermark";
-constexpr int64_t kHangTimeoutMs = 3000;
-
-int64_t nowNs() {
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    return ts.tv_sec * 1000000000LL + ts.tv_nsec;
-}
+constexpr std::chrono::milliseconds kHangTimeout{3000};
 
 }  // namespace
 
 OPlusCameraMDM::OPlusCameraMDM() {
-    sem_init(&mJankSem, 0, 0);
+    mWatchdog = std::thread(&OPlusCameraMDM::watchdogLoop, this);
 }
 
-void OPlusCameraMDM::postJankSem() {
-    sem_post(&mJankSem);
+OPlusCameraMDM::~OPlusCameraMDM() {
+    {
+        std::lock_guard<std::mutex> lock(mLock);
+        mStopWatchdog = true;
+    }
+    mWatchdogCv.notify_one();
+    mWatchdog.join();
 }
 
-void* OPlusCameraMDM::watchdogThread(void* arg) {
-    auto* self = static_cast<OPlusCameraMDM*>(arg);
-    while (true) {
-        sleep(3);
-        std::lock_guard<std::mutex> lock(self->mLock);
-        if (self->mCameraId >= 0 &&
-            self->mCaptureMs + kHangTimeoutMs < (nowNs() - self->mLastSetNs) / 1000000) {
-            self->mJankType = 0;
-            self->postJankSem();
+void OPlusCameraMDM::queueJankLocked(JankType type) {
+    if (std::find(mPendingJanks.begin(), mPendingJanks.end(), type) == mPendingJanks.end()) {
+        mPendingJanks.push_back(type);
+    }
+    mJankCv.notify_all();
+}
+
+bool OPlusCameraMDM::watchdogArmedLocked() const {
+    return mCameraId >= 0 && !mHangReported;
+}
+
+void OPlusCameraMDM::noteActivityLocked(bool wasArmed) {
+    mLastActivity = std::chrono::steady_clock::now();
+    mHangReported = false;
+    if (watchdogArmedLocked() != wasArmed) {
+        mWatchdogCv.notify_one();
+    }
+}
+
+void OPlusCameraMDM::watchdogLoop() {
+    std::unique_lock<std::mutex> lock(mLock);
+    while (!mStopWatchdog) {
+        if (!watchdogArmedLocked()) {
+            mWatchdogCv.wait(lock);
+            continue;
+        }
+        // Sample once per timeout period like the OxygenOS service rather than
+        // waiting for an exact deadline: below 10 fps the HAL's heartbeat is
+        // itself more than 3 s apart.
+        if (mWatchdogCv.wait_for(lock, kHangTimeout) == std::cv_status::no_timeout) {
+            continue;
+        }
+        if (watchdogArmedLocked() &&
+            std::chrono::steady_clock::now() - mLastActivity >
+                    kHangTimeout + std::chrono::milliseconds(mCaptureMs)) {
+            mHangReported = true;
+            queueJankLocked(JankType::Hang);
         }
     }
-    return nullptr;
 }
 
 Return<bool> OPlusCameraMDM::setCameraId(uint32_t cameraId, uint32_t logicalCameraId,
                                          uint32_t fps) {
     std::lock_guard<std::mutex> lock(mLock);
-    mLastSetNs = nowNs();
+    const bool wasArmed = watchdogArmedLocked();
     mCameraId = cameraId;
     mLogicalCameraId = logicalCameraId;
     mFps = fps;
-    if (!mWatchdogStarted) {
-        mWatchdogStarted = true;
-        pthread_t thread;
-        pthread_create(&thread, nullptr, watchdogThread, this);
-        pthread_detach(thread);
-    }
+    noteActivityLocked(wasArmed);
     return true;
 }
 
@@ -86,6 +108,7 @@ Return<void> OPlusCameraMDM::getPackageName(getPackageName_cb _hidl_cb) {
 Return<bool> OPlusCameraMDM::setJankMsg(const hidl_string& msg, uint32_t value1,
                                         uint32_t value2) {
     std::lock_guard<std::mutex> lock(mLock);
+    const bool wasArmed = watchdogArmedLocked();
     const char* str = msg.c_str();
     if (strncmp(str, "CaptureStarted", 14) == 0) {
         mCapturing = true;
@@ -97,57 +120,47 @@ Return<bool> OPlusCameraMDM::setJankMsg(const hidl_string& msg, uint32_t value1,
         LOG(ERROR) << "setJankMsg: OP_EXT msg " << str;
         mRequiredFps = value1;
         mFps = value2;
-        mJankType = 1;
-        postJankSem();
+        queueJankLocked(JankType::SlowFps);
     }
+    noteActivityLocked(wasArmed);
     return true;
 }
 
 Return<void> OPlusCameraMDM::getJankMsg(getJankMsg_cb _hidl_cb) {
-    if (mJankLock.try_lock()) {
-        mJankLock.unlock();
-    } else {
-        // Another getJankMsg is already parked in sem_wait; give this one
-        // the "nothing to report" answer instead of queueing behind it.
-        {
-            std::lock_guard<std::mutex> lock(mLock);
-            mJankType = -1;
-        }
-        postJankSem();
-    }
-
-    mJankLock.lock();
-    while (sem_wait(&mJankSem) != 0 && errno == EINTR) {
-    }
-
     char buf[1024] = "{}";
     {
-        std::lock_guard<std::mutex> lock(mLock);
-        if (mCameraId < 0) {
-            LOG(INFO) << "getJankMsg: OP_EXT camera is closed, donot send jank message";
-            mJankType = -1;
-        } else if (mJankType == 0) {
-            snprintf(buf, sizeof(buf),
-                     "{\"errorType\": \"Camera Hang\",\"data\": [{\"paramKey\": "
-                     "\"cameraId\",\"value\": \"%d\"},{\"paramKey\": "
-                     "\"activeCameraId\",\"value\": \"%d\"},{\"paramKey\": "
-                     "\"fps\",\"value\": \"%d\"},{\"paramKey\": "
-                     "\"isHangWhileCapture\",\"value\": \"%s\"}]}",
-                     mCameraId, mLogicalCameraId, mFps, mCapturing ? "true" : "false");
-        } else if (mJankType == 1) {
-            snprintf(buf, sizeof(buf),
-                     "{\"errorType\": \"Slow FPS\",\"data\": [{\"paramKey\": "
-                     "\"cameraId\",\"value\": \"%d\"},{\"paramKey\": "
-                     "\"activeCameraId\",\"value\": \"%d\"},{\"paramKey\": "
-                     "\"requiredfps\",\"value\": \"%d\"},{\"paramKey\": "
-                     "\"currentfps\",\"value\": \"%d\"}]}",
-                     mCameraId, mLogicalCameraId, mRequiredFps, mFps);
+        std::unique_lock<std::mutex> lock(mLock);
+        const uint64_t waiter = ++mJankWaiter;
+        mJankCv.notify_all();
+        mJankCv.wait(lock, [&] { return mJankWaiter != waiter || !mPendingJanks.empty(); });
+
+        if (mJankWaiter == waiter) {
+            const JankType type = mPendingJanks.front();
+            mPendingJanks.pop_front();
+            if (mCameraId < 0) {
+                LOG(INFO) << "getJankMsg: OP_EXT camera is closed, donot send jank message";
+            } else if (type == JankType::Hang) {
+                snprintf(buf, sizeof(buf),
+                         "{\"errorType\": \"Camera Hang\",\"data\": [{\"paramKey\": "
+                         "\"cameraId\",\"value\": \"%d\"},{\"paramKey\": "
+                         "\"activeCameraId\",\"value\": \"%d\"},{\"paramKey\": "
+                         "\"fps\",\"value\": \"%d\"},{\"paramKey\": "
+                         "\"isHangWhileCapture\",\"value\": \"%s\"}]}",
+                         mCameraId, mLogicalCameraId, mFps, mCapturing ? "true" : "false");
+            } else {
+                snprintf(buf, sizeof(buf),
+                         "{\"errorType\": \"Slow FPS\",\"data\": [{\"paramKey\": "
+                         "\"cameraId\",\"value\": \"%d\"},{\"paramKey\": "
+                         "\"activeCameraId\",\"value\": \"%d\"},{\"paramKey\": "
+                         "\"requiredfps\",\"value\": \"%d\"},{\"paramKey\": "
+                         "\"currentfps\",\"value\": \"%d\"}]}",
+                         mCameraId, mLogicalCameraId, mRequiredFps, mFps);
+            }
         }
     }
 
     LOG(INFO) << "getJankMsg: OP_EXT msg: " << buf;
     _hidl_cb(buf);
-    mJankLock.unlock();
     return Void();
 }
 

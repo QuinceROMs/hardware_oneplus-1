@@ -7,12 +7,16 @@
 
 #include <vendor/oplus/hardware/cameraMDM/2.0/IOPlusCameraMDM.h>
 
-#include <semaphore.h>
 #include <sys/stat.h>
 
+#include <chrono>
+#include <condition_variable>
+#include <cstdint>
+#include <deque>
 #include <mutex>
 #include <set>
 #include <string>
+#include <thread>
 
 namespace vendor::oplus::hardware::cameraMDM::implementation {
 
@@ -24,6 +28,7 @@ using ::android::hardware::Void;
 class OPlusCameraMDM final : public V2_0::IOPlusCameraMDM {
   public:
     OPlusCameraMDM();
+    ~OPlusCameraMDM() override;
 
     Return<bool> setCameraId(uint32_t cameraId, uint32_t logicalCameraId,
                              uint32_t fps) override;
@@ -41,13 +46,16 @@ class OPlusCameraMDM final : public V2_0::IOPlusCameraMDM {
     Return<bool> file_close(int32_t fd) override;
 
   private:
-    static void* watchdogThread(void* arg);
+    enum class JankType { Hang, SlowFps };
 
-    void postJankSem();
+    void watchdogLoop();
+    bool watchdogArmedLocked() const;
+    void noteActivityLocked(bool wasArmed);
+
+    void queueJankLocked(JankType type);
     void closeStaleFdsLocked(const struct stat* reopened);
 
     std::mutex mLock;
-    std::mutex mJankLock;
     std::mutex mFileLock;
 
     // Descriptors handed out by file_open. The camera app closes them only after
@@ -64,11 +72,23 @@ class OPlusCameraMDM final : public V2_0::IOPlusCameraMDM {
     int32_t mRequiredFps = -1;
     // Shared by setCameraId and SlowFPS, as the jank reports print it for both.
     int32_t mFps = -1;
-    int32_t mJankType = -1;
 
-    int64_t mLastSetNs = 0;
-    sem_t mJankSem;
-    bool mWatchdogStarted = false;
+    // A report reads the current state when it is sent, so each type is queued
+    // at most once.
+    std::deque<JankType> mPendingJanks;
+    // Bumped by every getJankMsg call; a call still waiting from before then
+    // returns an empty report and leaves the queue to the newer one.
+    uint64_t mJankWaiter = 0;
+    std::condition_variable mJankCv;
+
+    // Refreshed by every call from the camera HAL. The sm8150 HAL calls
+    // setCameraId every 30 frames while streaming, so it ages only once the
+    // pipeline stops delivering frames.
+    std::chrono::steady_clock::time_point mLastActivity;
+    bool mHangReported = false;
+    bool mStopWatchdog = false;
+    std::condition_variable mWatchdogCv;
+    std::thread mWatchdog;
 };
 
 }  // namespace vendor::oplus::hardware::cameraMDM::implementation
