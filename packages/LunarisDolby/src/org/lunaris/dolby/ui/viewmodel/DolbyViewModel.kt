@@ -34,6 +34,7 @@ class DolbyViewModel(application: Application) : AndroidViewModel(application) {
         loadSettings()
         observeAudioOutputState()
         observeProfileChanges()
+        viewModelScope.launch { repository.savedStateApplied.collect { loadSettings() } }
     }
 
     private fun observeAudioOutputState() {

@@ -16,8 +16,12 @@ import org.lunaris.dolby.DolbyConstants.DsParam
 import org.lunaris.dolby.R
 import org.lunaris.dolby.audio.DolbyAudioEffect
 import org.lunaris.dolby.domain.models.*
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 class DolbyRepository private constructor(private val context: Context) {
@@ -36,6 +40,11 @@ class DolbyRepository private constructor(private val context: Context) {
     
     private val _currentProfile = MutableStateFlow(readSavedProfile() ?: 0)
     val currentProfile: StateFlow<Int> = _currentProfile.asStateFlow()
+
+    private val _savedStateApplied =
+        MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    /** Emits after applySavedState, as the saved state may have been replaced, e.g. by a device snapshot. */
+    val savedStateApplied: SharedFlow<Unit> = _savedStateApplied.asSharedFlow()
 
     init {
         // Older versions kept this key only while app profile monitoring was on. Without it no
@@ -181,6 +190,8 @@ class DolbyRepository private constructor(private val context: Context) {
             }
         } catch (e: Exception) {
             Log.w(TAG, "Error applying saved state: ${e.message}")
+        } finally {
+            _savedStateApplied.tryEmit(Unit)
         }
     }
 

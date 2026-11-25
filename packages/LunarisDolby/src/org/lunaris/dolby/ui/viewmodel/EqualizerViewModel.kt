@@ -70,6 +70,7 @@ class EqualizerViewModel(application: Application) : AndroidViewModel(applicatio
         DolbyConstants.dlog(TAG, "ViewModel initialized")
         loadEqualizer()
         observeProfileChanges()
+        viewModelScope.launch { repository.savedStateApplied.collect { loadEqualizer() } }
     }
     
     private fun observeProfileChanges() {
