@@ -195,21 +195,21 @@ class AppProfileMonitorService : Service() {
             DolbyConstants.dlog(TAG, "Foreground app changed: $previousPackage -> $packageName")
             
             pendingSwitchRunnable?.let { monitorHandler.removeCallbacks(it) }
-            
+
             val switchRunnable = Runnable {
                 try {
                     if (headphoneOnlyMode && !isHeadphoneConnected()) {
                         DolbyConstants.dlog(TAG, "Headphones disconnected, aborting profile switch")
                         return@Runnable
                     }
-                    
+
                     val assignedProfile = appProfileManager.getAppProfile(packageName)
                     val showToasts = prefs.getBoolean("app_profile_show_toasts", true)
-                    
+
                     if (assignedProfile >= 0) {
                         DolbyConstants.dlog(TAG, "Switching to profile $assignedProfile for $packageName")
                         halScope.launch { dolbyRepository.setAppProfile(assignedProfile) }
-                        
+
                         if (showToasts) {
                             val profileName = dolbyProfileName(this@AppProfileMonitorService, assignedProfile)
                             val appName = getAppName(packageName)
