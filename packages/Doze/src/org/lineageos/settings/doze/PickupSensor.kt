@@ -36,8 +36,8 @@ class PickupSensor(
         if (delta < MIN_PULSE_INTERVAL_MS) {
             return
         }
-        entryTimestamp = SystemClock.elapsedRealtime()
         if (event.values[0] == sensorValue) {
+            entryTimestamp = SystemClock.elapsedRealtime()
             if (Utils.isPickUpSetToWake(context)) {
                 wakeLock.acquire(WAKELOCK_TIMEOUT_MS)
                 powerManager.wakeUpWithProximityCheck(

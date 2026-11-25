@@ -31,8 +31,8 @@ class PocketSensor(
         if (delta < MIN_PULSE_INTERVAL_MS) {
             return
         }
-        entryTimestamp = SystemClock.elapsedRealtime()
         if (event.values[0] == sensorValue) {
+            entryTimestamp = SystemClock.elapsedRealtime()
             Utils.launchDozePulse(context)
         }
     }
