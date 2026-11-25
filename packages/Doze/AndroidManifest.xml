@@ -41,7 +41,7 @@
 
         <service android:name=".DozeService"
                  android:permission="OneplusDozeService"
-                 android:exported="true">
+                 android:exported="false">
         </service>
 
         <activity
