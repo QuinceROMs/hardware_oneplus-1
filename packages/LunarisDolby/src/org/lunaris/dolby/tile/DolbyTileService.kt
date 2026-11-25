@@ -45,7 +45,9 @@ class DolbyTileService : TileService() {
 
     override fun onClick() {
         super.onClick()
-        halScope.launch {
+        // Not on halScope: the tile can be unbound right after a click, and onDestroy() would
+        // cancel the toggle before it ran.
+        DolbyDispatchers.processScope.launch {
             val newState = !repository.getDolbyEnabled()
             repository.setDolbyEnabled(newState)
             DolbyEffectService.update(applicationContext)
