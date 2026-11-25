@@ -5,13 +5,11 @@
 
 package org.lunaris.dolby.data
 
-import android.content.ComponentName
 import android.content.Context
 import android.content.SharedPreferences
 import android.media.AudioAttributes
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
-import android.service.quicksettings.TileService
 import android.util.Log
 import org.lunaris.dolby.DolbyConstants
 import org.lunaris.dolby.DolbyConstants.DsParam
@@ -250,7 +248,6 @@ class DolbyRepository private constructor(private val context: Context) {
         } catch (e: Exception) {
             DolbyConstants.dlog(TAG, "Error setting Dolby enabled: ${e.message}")
         }
-        requestTileUpdate()
     }
 
     fun getCurrentProfile(): Int {
@@ -296,7 +293,6 @@ class DolbyRepository private constructor(private val context: Context) {
             restoreProfilePreset(effect, profile)
             _currentProfile.value = profile
             DolbyConstants.dlog(TAG, "Profile set to: $profile")
-            requestTileUpdate()
             true
         } catch (e: Exception) {
             DolbyConstants.dlog(TAG, "Error setting current profile: ${e.message}")
@@ -909,17 +905,6 @@ class DolbyRepository private constructor(private val context: Context) {
         } catch (e: Exception) {
             DolbyConstants.dlog(TAG, "setMidLevel: unexpected error - ${e.message}")
             throw e
-        }
-    }
-    
-    fun requestTileUpdate() {
-        try {
-            TileService.requestListeningState(
-                context,
-                ComponentName(context, "org.lunaris.dolby.tile.DolbyTileService")
-            )
-        } catch (e: Exception) {
-            DolbyConstants.dlog(TAG, "Failed to request tile update: ${e.message}")
         }
     }
 
