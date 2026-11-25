@@ -38,7 +38,6 @@
 #include <string.h>
 #include <sys/ioctl.h>
 #include <cmath>
-#include <cstdlib>
 #include <thread>
 
 #include "include/Vibrator.h"
@@ -351,8 +350,6 @@ LedVibratorDevice::LedVibratorDevice() {
 
     mDetected = true;
 
-    mWriteToken = std::rand();
-    mComposeToken = std::rand();
     /* vmax sysfs node doesn't actually directly control vmax.
        values 800 - 1500 will set actual vmax to 0 while values
        0 - 255 actually controls gain. Write 800 so we can guarantee
@@ -361,7 +358,6 @@ LedVibratorDevice::LedVibratorDevice() {
     if (ret != 0) {
         ALOGD("writing 800 to vmax in constructor failed, ret = %d", ret);
     }
-    mSavedVmax = 255;
 }
 
 int LedVibratorDevice::write_value(int writeToken, const char* file, const char* value) {
@@ -427,8 +423,8 @@ int LedVibratorDevice::onWaveform(int waveformIndex) {
 int LedVibratorDevice::off() {
     int ret = 0;
     // change all tokens to stop/no-op existing effects
-    mWriteToken = std::rand();
-    mComposeToken = std::rand();
+    ++mWriteToken;
+    ++mComposeToken;
     ret |= write_value(mWriteToken, LED_DEVICE "/rtp", "0");
     return ret;
 }

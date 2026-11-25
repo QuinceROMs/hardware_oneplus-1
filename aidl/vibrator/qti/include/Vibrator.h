@@ -31,6 +31,8 @@
 
 #include <aidl/android/hardware/vibrator/BnVibrator.h>
 
+#include <atomic>
+
 namespace aidl {
 namespace android {
 namespace hardware {
@@ -71,9 +73,9 @@ class LedVibratorDevice {
                 const std::shared_ptr<IVibratorCallback>& callback);
 
   private:
-    int mSavedVmax;
-    int mWriteToken;
-    int mComposeToken;
+    std::atomic<int> mSavedVmax{255};
+    std::atomic<int> mWriteToken{0};
+    std::atomic<int> mComposeToken{0};
 };
 
 class Vibrator : public BnVibrator {
