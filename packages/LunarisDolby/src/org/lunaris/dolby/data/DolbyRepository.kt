@@ -935,7 +935,7 @@ class DolbyRepository private constructor(private val context: Context) {
         private const val MID_GAIN_MULTIPLIER = 1.3f
         private const val TREBLE_GAIN_MULTIPLIER = 1.5f
         
-        private val ATTRIBUTES_MEDIA = AudioAttributes.Builder()
+        val ATTRIBUTES_MEDIA: AudioAttributes = AudioAttributes.Builder()
             .setUsage(AudioAttributes.USAGE_MEDIA)
             .build()
 

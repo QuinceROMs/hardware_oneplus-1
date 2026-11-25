@@ -56,6 +56,12 @@ class DolbyEffectService : Service() {
         }
     }
 
+    // Media can also move to another device that is already connected, e.g. when the output is
+    // picked in the media output switcher, without any device being added or removed.
+    private val routeListener = AudioManager.OnDevicesForAttributesChangedListener { _, _ ->
+        handleDeviceChange()
+    }
+
     private val playbackCallback = object : AudioManager.AudioPlaybackCallback() {
         override fun onPlaybackConfigChanged(configs: MutableList<AudioPlaybackConfiguration>?) {
             val isActive = configs?.any { it.isActive } == true
@@ -85,6 +91,8 @@ class DolbyEffectService : Service() {
         }
 
         audioManager.registerAudioDeviceCallback(audioDeviceCallback, handler)
+        audioManager.addOnDevicesForAttributesChangedListener(
+            DolbyRepository.ATTRIBUTES_MEDIA, mainExecutor, routeListener)
         audioManager.registerAudioPlaybackCallback(playbackCallback, handler)
         Log.d(TAG, "Dolby effect service created")
     }
@@ -96,8 +104,8 @@ class DolbyEffectService : Service() {
         previousActiveDevice = newDevice
 
         // Every added or removed device ends up here, inputs and outputs that are not routed
-        // included, as does the initial callback on registration. If the routed output did not
-        // change there is nothing to save or restore.
+        // included, as does the initial callback on registration and every change of the media
+        // route. If the routed output did not change there is nothing to save or restore.
         val oldKey = oldDevice?.let { deviceStateManager.deviceKey(it) }
         val newKey = newDevice?.let { deviceStateManager.deviceKey(it) }
         if (oldKey == newKey) return
@@ -124,6 +132,7 @@ class DolbyEffectService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         audioManager.unregisterAudioDeviceCallback(audioDeviceCallback)
+        audioManager.removeOnDevicesForAttributesChangedListener(routeListener)
         audioManager.unregisterAudioPlaybackCallback(playbackCallback)
         handler.removeCallbacksAndMessages(null)
         halScope.cancel()
