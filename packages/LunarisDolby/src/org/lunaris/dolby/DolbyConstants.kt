@@ -35,6 +35,8 @@ object DolbyConstants {
     
     const val PREF_FILE_PRESETS = "presets"
 
+    fun profilePrefsFile(profile: Int) = "profile_$profile"
+
     enum class DsParam(val id: Int, val length: Int = 1) {
         HEADPHONE_VIRTUALIZER(101),
         SPEAKER_VIRTUALIZER(102),

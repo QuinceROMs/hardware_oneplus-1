@@ -10,10 +10,15 @@ import android.content.SharedPreferences
 import android.media.AudioDeviceInfo
 
 import org.lunaris.dolby.DolbyConstants
-import org.lunaris.dolby.domain.models.BandGain
-import org.lunaris.dolby.domain.models.BandMode
 
+/**
+ * Keeps a snapshot of the settings per output device. Snapshots are copies of the saved settings,
+ * not of the effect, which rejects parameters right after boot; DolbyRepository.applySavedState
+ * pushes the saved settings to the effect.
+ */
 class DeviceStateManager(private val context: Context) {
+
+    private val dolbyPrefs = context.getSharedPreferences("dolby_prefs", Context.MODE_PRIVATE)
 
     fun deviceKey(device: AudioDeviceInfo): String {
         return when (device.type) {
@@ -34,160 +39,88 @@ class DeviceStateManager(private val context: Context) {
         }
     }
 
-    fun saveSnapshot(deviceKey: String, repository: DolbyRepository) {
+    /**
+     * Gives the saved settings to [deviceKey]: they are stored as the snapshot of the device they
+     * belong to and replaced by the snapshot of [deviceKey]. If [deviceKey] has no snapshot, or the
+     * settings belong to no known device, it takes them over as they are. Apply the saved state
+     * afterwards.
+     */
+    fun switchTo(deviceKey: String) {
         splitLegacyUsbSnapshot()
-        // Without the effect the getters return defaults, which would replace the stored state.
-        if (!repository.isEffectAvailable()) {
-            DolbyConstants.dlog(TAG, "Effect unavailable, not saving snapshot for device=$deviceKey")
-            return
+        val owner = dolbyPrefs.getString(PREF_ACTIVE_DEVICE, null)
+        if (owner == deviceKey) return
+        if (owner != null) {
+            saveSnapshot(owner)
+            restoreSnapshot(deviceKey)
         }
-        val profile = repository.getCurrentProfile()
-        val prefs = getDevicePrefs(deviceKey)
-        val editor = prefs.edit()
-
-        editor.putInt(KEY_VERSION, SNAPSHOT_VERSION)
-
-        editor.putBoolean(KEY_DOLBY_ENABLED, repository.getDolbyEnabled())
-        editor.putInt(KEY_PROFILE, profile)
-
-        editor.putInt(KEY_IEQ, repository.getIeqPreset(profile))
-
-        editor.putBoolean(KEY_HP_VIRT, repository.getHeadphoneVirtualizerEnabled(profile))
-        editor.putBoolean(KEY_SPK_VIRT, repository.getSpeakerVirtualizerEnabled(profile))
-
-        editor.putBoolean(KEY_DIALOGUE, repository.getDialogueEnhancerEnabled(profile))
-        editor.putInt(KEY_DIALOGUE_AMT, repository.getDialogueEnhancerAmount(profile))
-
-        editor.putBoolean(KEY_BASS_ENABLED, repository.getBassEnhancerEnabled(profile))
-        editor.putInt(KEY_BASS_LEVEL, repository.getBassLevel(profile))
-        editor.putInt(KEY_BASS_CURVE, repository.getBassCurve(profile))
-
-        editor.putBoolean(KEY_TREBLE_ENABLED, repository.getTrebleEnhancerEnabled(profile))
-        editor.putInt(KEY_TREBLE_LEVEL, repository.getTrebleLevel(profile))
-
-        editor.putBoolean(KEY_MID_ENABLED, repository.getMidEnhancerEnabled(profile))
-        editor.putInt(KEY_MID_LEVEL, repository.getMidLevel(profile))
-
-        if (repository.volumeLevelerSupported) {
-            editor.putBoolean(KEY_VOLUME, repository.getVolumeLevelerEnabled(profile))
-        }
-        if (repository.stereoWideningSupported) {
-            editor.putInt(KEY_STEREO, repository.getStereoWideningAmount(profile))
-        }
-
-        val gains = repository.getEqualizerGains(profile, BandMode.TWENTY_BAND)
-        editor.putInt(KEY_EQ_BAND_COUNT, gains.size)
-        editor.putString(KEY_EQ_GAINS, gains.joinToString(",") { it.gain.toString() })
-
-        editor.apply()
-        DolbyConstants.dlog(TAG,
-            "Snapshot saved for device=$deviceKey profile=$profile bands=${gains.size} v=$SNAPSHOT_VERSION")
+        setActiveDevice(deviceKey)
     }
 
-    fun restoreSnapshot(deviceKey: String, repository: DolbyRepository): Boolean {
-        splitLegacyUsbSnapshot()
-        val prefs = getDevicePrefs(deviceKey)
+    /** Records that the saved settings belong to [deviceKey], or to no known device if null. */
+    fun setActiveDevice(deviceKey: String?) {
+        dolbyPrefs.edit().putString(PREF_ACTIVE_DEVICE, deviceKey).apply()
+    }
 
-        if (!prefs.contains(KEY_VERSION)) {
-            DolbyConstants.dlog(TAG, "No snapshot for device=$deviceKey")
-            return false
+    private fun saveSnapshot(deviceKey: String) {
+        val profile = dolbyPrefs.getString(DolbyConstants.PREF_PROFILE, null)?.toIntOrNull() ?: 0
+        val settings = getProfilePrefs(profile)
+        // A profile whose equalizer was never set keeps the flat default of the DAX configuration.
+        val gains = parseGains(settings.getString(DolbyConstants.PREF_PRESET, null)) ?: IntArray(EQ_BANDS)
+        val editor = getDevicePrefs(deviceKey).edit()
+            .clear()
+            .putInt(KEY_VERSION, SNAPSHOT_VERSION)
+            .putBoolean(KEY_DOLBY_ENABLED, dolbyPrefs.getBoolean(DolbyConstants.PREF_ENABLE, false))
+            .putInt(KEY_PROFILE, profile)
+            .putInt(KEY_IEQ, settings.getString(DolbyConstants.PREF_IEQ, null)?.toIntOrNull() ?: 0)
+            .putString(KEY_EQ_GAINS, gains.joinToString(","))
+        BOOLEAN_SETTINGS.forEach { (key, pref) -> editor.putBoolean(key, settings.getBoolean(pref, false)) }
+        INT_SETTINGS.forEach { editor.putInt(it.key, settings.getInt(it.pref, it.default)) }
+        editor.apply()
+        DolbyConstants.dlog(TAG, "Snapshot saved for device=$deviceKey profile=$profile")
+    }
+
+    private fun restoreSnapshot(deviceKey: String) {
+        val snapshot = getDevicePrefs(deviceKey)
+        if (!snapshot.contains(KEY_VERSION)) {
+            DolbyConstants.dlog(TAG, "No snapshot for device=$deviceKey, keeping the current settings")
+            return
         }
-
-        val storedVersion = prefs.getInt(KEY_VERSION, -1)
+        val storedVersion = snapshot.getInt(KEY_VERSION, -1)
         if (storedVersion != SNAPSHOT_VERSION) {
             DolbyConstants.dlog(TAG,
                 "Snapshot version mismatch for $deviceKey: stored=$storedVersion current=$SNAPSHOT_VERSION — discarding")
-            clearSnapshot(deviceKey)
-            return false
+            snapshot.edit().clear().apply()
+            return
         }
 
-        // Without the effect the setters below throw, and the catch would discard the snapshot.
-        if (!repository.isEffectAvailable()) {
-            DolbyConstants.dlog(TAG, "Effect unavailable, not restoring snapshot for device=$deviceKey")
-            return false
+        val profile = snapshot.getInt(KEY_PROFILE, 0)
+        dolbyPrefs.edit()
+            .putBoolean(DolbyConstants.PREF_ENABLE, snapshot.getBoolean(KEY_DOLBY_ENABLED, true))
+            .putString(DolbyConstants.PREF_PROFILE, profile.toString())
+            .putInt(DolbyConstants.PREF_USER_PROFILE, profile)
+            .apply()
+
+        val editor = getProfilePrefs(profile).edit()
+            .putString(DolbyConstants.PREF_IEQ, snapshot.getInt(KEY_IEQ, 0).toString())
+        BOOLEAN_SETTINGS.forEach { (key, pref) -> editor.putBoolean(pref, snapshot.getBoolean(key, false)) }
+        INT_SETTINGS.forEach { editor.putInt(it.pref, snapshot.getInt(it.key, it.default)) }
+        val gains = parseGains(snapshot.getString(KEY_EQ_GAINS, null))
+        if (gains != null) {
+            editor.putString(DolbyConstants.PREF_PRESET, gains.joinToString(","))
+        } else {
+            DolbyConstants.dlog(TAG, "Invalid EQ gains in the snapshot of $deviceKey — skipping EQ restore")
         }
-
-        return try {
-            val enabled = prefs.getBoolean(KEY_DOLBY_ENABLED, true)
-            val profile = prefs.getInt(KEY_PROFILE, 0)
-
-            repository.setDolbyEnabled(enabled)
-            repository.setCurrentProfile(profile)
-
-            repository.setIeqPreset(profile, prefs.getInt(KEY_IEQ, 0))
-
-            repository.setHeadphoneVirtualizerEnabled(profile, prefs.getBoolean(KEY_HP_VIRT, false))
-            repository.setSpeakerVirtualizerEnabled(profile, prefs.getBoolean(KEY_SPK_VIRT, false))
-
-            repository.setDialogueEnhancerEnabled(profile, prefs.getBoolean(KEY_DIALOGUE, false))
-            repository.setDialogueEnhancerAmount(profile, prefs.getInt(KEY_DIALOGUE_AMT, 6))
-
-            repository.setBassEnhancerEnabled(profile, prefs.getBoolean(KEY_BASS_ENABLED, false))
-            repository.setBassCurve(profile, prefs.getInt(KEY_BASS_CURVE, 0))
-            repository.setBassLevel(profile, prefs.getInt(KEY_BASS_LEVEL, 0))
-
-            repository.setTrebleEnhancerEnabled(profile, prefs.getBoolean(KEY_TREBLE_ENABLED, false))
-            repository.setTrebleLevel(profile, prefs.getInt(KEY_TREBLE_LEVEL, 0))
-
-            repository.setMidEnhancerEnabled(profile, prefs.getBoolean(KEY_MID_ENABLED, false))
-            repository.setMidLevel(profile, prefs.getInt(KEY_MID_LEVEL, 0))
-
-            if (repository.volumeLevelerSupported) {
-                repository.setVolumeLevelerEnabled(profile, prefs.getBoolean(KEY_VOLUME, false))
-            }
-            if (repository.stereoWideningSupported) {
-                repository.setStereoWideningAmount(profile, prefs.getInt(KEY_STEREO, 32))
-            }
-
-            val storedBandCount = prefs.getInt(KEY_EQ_BAND_COUNT, -1)
-            val gainsStr = prefs.getString(KEY_EQ_GAINS, null)
-            if (gainsStr != null && storedBandCount > 0) {
-                val gains = gainsStr.split(",").mapNotNull { it.toIntOrNull() }
-                if (gains.size == storedBandCount) {
-                    val bandGains = gains.mapIndexed { i, g ->
-                        BandGain(
-                            frequency = DolbyRepository.BAND_FREQUENCIES_20.getOrElse(i) { i },
-                            gain = g
-                        )
-                    }
-                    repository.setEqualizerGains(profile, bandGains, BandMode.TWENTY_BAND)
-                } else {
-                    DolbyConstants.dlog(TAG,
-                        "EQ band count mismatch for $deviceKey: stored=$storedBandCount actual=${gains.size} — skipping EQ restore")
-                }
-            }
-
-            DolbyConstants.dlog(TAG,
-                "Snapshot restored for device=$deviceKey profile=$profile v=$storedVersion")
-            true
-        } catch (e: Exception) {
-            DolbyConstants.dlog(TAG,
-                "Failed to restore snapshot for $deviceKey: ${e.message} — discarding")
-            clearSnapshot(deviceKey)
-            false
-        }
+        editor.apply()
+        DolbyConstants.dlog(TAG, "Snapshot restored for device=$deviceKey profile=$profile")
     }
 
-    fun hasSnapshot(deviceKey: String): Boolean {
-        val prefs = getDevicePrefs(deviceKey)
-        return prefs.contains(KEY_VERSION) &&
-                prefs.getInt(KEY_VERSION, -1) == SNAPSHOT_VERSION
-    }
+    // DolbyRepository only applies a preset with a gain for every band.
+    private fun parseGains(value: String?): IntArray? =
+        value?.split(",")?.map { it.toIntOrNull() ?: return null }
+            ?.takeIf { it.size == EQ_BANDS }?.toIntArray()
 
-    fun clearSnapshot(deviceKey: String) {
-        getDevicePrefs(deviceKey).edit().clear().apply()
-        DolbyConstants.dlog(TAG, "Snapshot cleared for device=$deviceKey")
-    }
-
-    fun getAllDeviceKeys(): List<String> {
-        val dir = context.filesDir.parentFile?.let {
-            java.io.File(it, "shared_prefs")
-        } ?: return emptyList()
-        return dir.listFiles()
-            ?.filter { it.name.startsWith("device_state_") }
-            ?.map { it.name.removePrefix("device_state_").removeSuffix(".xml") }
-            ?: emptyList()
-    }
+    private fun getProfilePrefs(profile: Int): SharedPreferences =
+        context.getSharedPreferences(DolbyConstants.profilePrefsFile(profile), Context.MODE_PRIVATE)
 
     private fun getDevicePrefs(deviceKey: String): SharedPreferences =
         context.getSharedPreferences("device_state_$deviceKey", Context.MODE_PRIVATE)
@@ -196,7 +129,6 @@ class DeviceStateManager(private val context: Context) {
     // of whichever of them was used last. Give the USB output a copy once, so neither loses what
     // it restored before; from then on each keeps its own.
     private fun splitLegacyUsbSnapshot() {
-        val dolbyPrefs = context.getSharedPreferences("dolby_prefs", Context.MODE_PRIVATE)
         if (dolbyPrefs.getBoolean(PREF_USB_SNAPSHOT_SPLIT, false)) return
 
         val wired = getDevicePrefs(DEVICE_WIRED)
@@ -219,33 +151,44 @@ class DeviceStateManager(private val context: Context) {
         dolbyPrefs.edit().putBoolean(PREF_USB_SNAPSHOT_SPLIT, true).apply()
     }
 
+    private class IntSetting(val key: String, val pref: String, val default: Int)
+
     companion object {
         private const val TAG = "DeviceStateManager"
 
-        const val SNAPSHOT_VERSION = 1
+        private const val SNAPSHOT_VERSION = 1
+
+        private const val EQ_BANDS = 20
 
         private const val DEVICE_WIRED = "wired_headphones"
         private const val DEVICE_USB = "usb_audio"
         private const val PREF_USB_SNAPSHOT_SPLIT = "device_state_usb_split"
+        private const val PREF_ACTIVE_DEVICE = "device_state_active"
 
         private const val KEY_VERSION = "snapshot_version"
         private const val KEY_DOLBY_ENABLED = "enabled"
         private const val KEY_PROFILE = "profile"
         private const val KEY_IEQ = "ieq"
-        private const val KEY_HP_VIRT = "hp_virt"
-        private const val KEY_SPK_VIRT = "spk_virt"
-        private const val KEY_DIALOGUE = "dialogue"
-        private const val KEY_DIALOGUE_AMT  = "dialogue_amt"
-        private const val KEY_BASS_ENABLED = "bass_enabled"
-        private const val KEY_BASS_LEVEL = "bass_level"
-        private const val KEY_BASS_CURVE = "bass_curve"
-        private const val KEY_TREBLE_ENABLED = "treble_enabled"
-        private const val KEY_TREBLE_LEVEL = "treble_level"
-        private const val KEY_MID_ENABLED = "mid_enabled"
-        private const val KEY_MID_LEVEL = "mid_level"
-        private const val KEY_VOLUME = "volume"
-        private const val KEY_STEREO = "stereo"
-        private const val KEY_EQ_BAND_COUNT = "eq_band_count"
         private const val KEY_EQ_GAINS = "eq_gains"
+
+        // Snapshot keys and the profile settings they hold, with the defaults DolbyRepository
+        // reads and applies when a setting is missing.
+        private val BOOLEAN_SETTINGS = mapOf(
+            "hp_virt" to DolbyConstants.PREF_HP_VIRTUALIZER,
+            "spk_virt" to DolbyConstants.PREF_SPK_VIRTUALIZER,
+            "dialogue" to DolbyConstants.PREF_DIALOGUE,
+            "bass_enabled" to DolbyConstants.PREF_BASS,
+            "treble_enabled" to DolbyConstants.PREF_TREBLE,
+            "mid_enabled" to DolbyConstants.PREF_MID,
+            "volume" to DolbyConstants.PREF_VOLUME,
+        )
+        private val INT_SETTINGS = listOf(
+            IntSetting("dialogue_amt", DolbyConstants.PREF_DIALOGUE_AMOUNT, 6),
+            IntSetting("bass_level", DolbyConstants.PREF_BASS_LEVEL, 0),
+            IntSetting("bass_curve", DolbyConstants.PREF_BASS_CURVE, 0),
+            IntSetting("treble_level", DolbyConstants.PREF_TREBLE_LEVEL, 0),
+            IntSetting("mid_level", DolbyConstants.PREF_MID_LEVEL, 0),
+            IntSetting("stereo", DolbyConstants.PREF_STEREO_WIDENING, 32),
+        )
     }
 }

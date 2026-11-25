@@ -80,12 +80,9 @@ class DolbyEffectService : Service() {
         val memoryEnabled = isDeviceStateMemoryEnabled
         halScope.launch {
             if (currentDevice != null && memoryEnabled) {
-                val key = deviceStateManager.deviceKey(currentDevice)
-                val restored = deviceStateManager.restoreSnapshot(key, repository)
-                if (!restored) repository.applySavedState()
-            } else {
-                repository.applySavedState()
+                deviceStateManager.switchTo(deviceStateManager.deviceKey(currentDevice))
             }
+            repository.applySavedState()
         }
 
         audioManager.registerAudioDeviceCallback(audioDeviceCallback, handler)
@@ -107,27 +104,13 @@ class DolbyEffectService : Service() {
         if (oldKey == newKey) return
 
         halScope.launch {
-            if (oldKey != null && memoryEnabled) {
-                Log.d(TAG, "Saving snapshot for previous device: $oldKey")
-                deviceStateManager.saveSnapshot(oldKey, repository)
-            }
-
-            if (newKey != null) {
-                if (memoryEnabled) {
-                    Log.d(TAG, "Restoring snapshot for new device: $newKey")
-                    val restored = deviceStateManager.restoreSnapshot(newKey, repository)
-                    if (!restored) {
-                        Log.d(TAG, "First time device, applying saved state as base")
-                        repository.applySavedState()
-                    }
-                } else {
-                    Log.d(TAG, "Device state memory disabled, applying saved state")
-                    repository.applySavedState()
-                }
-            } else {
+            if (newKey == null) {
                 repository.updateSpeakerState()
-                repository.applySavedState()
+            } else if (memoryEnabled) {
+                Log.d(TAG, "Switching the settings to $newKey")
+                deviceStateManager.switchTo(newKey)
             }
+            repository.applySavedState()
         }
     }
 
@@ -212,21 +195,16 @@ class DolbyEffectService : Service() {
         }
 
         /**
-         * Call after changing PREF_DEVICE_STATE_MEMORY. Turning the memory on stores the current
-         * state for the current output first, so that the service starting up does not restore
-         * an older snapshot of that output over it.
+         * Call after changing PREF_DEVICE_STATE_MEMORY. Turning the memory on gives the current
+         * settings to the current output, so that the service starting up does not restore an
+         * older snapshot of that output over them.
          */
         fun onDeviceStateMemoryChanged(context: Context) {
             val prefs = context.getSharedPreferences("dolby_prefs", Context.MODE_PRIVATE)
             if (prefs.getBoolean(DolbyConstants.PREF_DEVICE_STATE_MEMORY, false)) {
-                val repository = DolbyRepository.getInstance(context)
                 val deviceStateManager = DeviceStateManager(context.applicationContext)
-                repository.getCurrentOutputDevice()?.let { device ->
-                    val key = deviceStateManager.deviceKey(device)
-                    DolbyDispatchers.processScope.launch {
-                        deviceStateManager.saveSnapshot(key, repository)
-                    }
-                }
+                val device = DolbyRepository.getInstance(context).getCurrentOutputDevice()
+                deviceStateManager.setActiveDevice(device?.let(deviceStateManager::deviceKey))
             }
             update(context)
         }

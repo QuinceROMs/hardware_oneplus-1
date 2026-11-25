@@ -165,6 +165,8 @@ class DolbyRepository private constructor(private val context: Context) {
     }
 
     fun applySavedState() {
+        // A device snapshot may have replaced the saved profile.
+        _currentProfile.value = readSavedProfile() ?: 0
         // Right after boot the DAP effect can reject parameters (INVALID_OPERATION) before the
         // audio HAL has set it up. The service calls this again when playback starts after
         // silence and when the output changes, so a failed attempt is only logged.
@@ -325,7 +327,7 @@ class DolbyRepository private constructor(private val context: Context) {
     }
 
     private fun getProfilePrefs(profile: Int): SharedPreferences {
-        return context.getSharedPreferences("profile_$profile", Context.MODE_PRIVATE)
+        return context.getSharedPreferences(DolbyConstants.profilePrefsFile(profile), Context.MODE_PRIVATE)
     }
 
     fun getBandMode(): BandMode {
@@ -755,7 +757,7 @@ class DolbyRepository private constructor(private val context: Context) {
     fun resetProfile(profile: Int) {
         try {
             requireEffect().resetProfileSpecificSettings(profile)
-            context.deleteSharedPreferences("profile_$profile")
+            context.deleteSharedPreferences(DolbyConstants.profilePrefsFile(profile))
         } catch (e: Exception) {
             DolbyConstants.dlog(TAG, "Error resetting profile: ${e.message}")
         }
