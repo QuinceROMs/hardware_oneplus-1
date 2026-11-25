@@ -48,6 +48,11 @@ class AppProfileMonitorService : Service() {
     private var isMonitoring = false
     private var pendingSwitchRunnable: Runnable? = null
     private var lastQueryTime: Long = 0
+    // The receiver is registered on the monitor thread and unregistered there or in
+    // onDestroy(), whichever comes first. Both fields are guarded by receiverLock.
+    private val receiverLock = Any()
+    private var receiverRegistered = false
+    private var destroyed = false
 
     private val checkForegroundAppRunnable = object : Runnable {
         override fun run() {
@@ -98,14 +103,19 @@ class AppProfileMonitorService : Service() {
 
     private fun startMonitoring() {
         if (!isMonitoring) {
-            isMonitoring = true
             val filter = IntentFilter().apply {
                 addAction(Intent.ACTION_SCREEN_ON)
                 addAction(Intent.ACTION_SCREEN_OFF)
             }
-            registerReceiver(
-                screenStateReceiver, filter, null, monitorHandler, Context.RECEIVER_NOT_EXPORTED
-            )
+            synchronized(receiverLock) {
+                if (destroyed) return
+                registerReceiver(
+                    screenStateReceiver, filter, null, monitorHandler,
+                    Context.RECEIVER_NOT_EXPORTED
+                )
+                receiverRegistered = true
+            }
+            isMonitoring = true
             // Checked after registering, so a screen change from here on reaches the receiver.
             if (powerManager.isInteractive) {
                 resumePolling()
@@ -123,10 +133,19 @@ class AppProfileMonitorService : Service() {
         monitorHandler.post(checkForegroundAppRunnable)
     }
 
+    private fun unregisterScreenReceiver() {
+        synchronized(receiverLock) {
+            if (receiverRegistered) {
+                receiverRegistered = false
+                unregisterReceiver(screenStateReceiver)
+            }
+        }
+    }
+
     private fun stopMonitoring() {
         if (isMonitoring) {
             isMonitoring = false
-            unregisterReceiver(screenStateReceiver)
+            unregisterScreenReceiver()
             monitorHandler.removeCallbacks(checkForegroundAppRunnable)
             pendingSwitchRunnable?.let { monitorHandler.removeCallbacks(it) }
             pendingSwitchRunnable = null
@@ -260,6 +279,12 @@ class AppProfileMonitorService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         DolbyConstants.dlog(TAG, "Service destroyed")
+        // The context drops its receivers right after this returns, and unregistering one
+        // after that throws, so it cannot be left to the monitor thread.
+        synchronized(receiverLock) {
+            destroyed = true
+            unregisterScreenReceiver()
+        }
         // halScope is not cancelled, so the restore queued by stopMonitoring() still runs.
         // quitSafely() still delivers messages that are already due, such as this one.
         monitorHandler.post { stopMonitoring() }
