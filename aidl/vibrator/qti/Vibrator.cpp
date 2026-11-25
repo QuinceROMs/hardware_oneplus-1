@@ -340,9 +340,14 @@ LedVibratorDevice::LedVibratorDevice() {
     snprintf(devicename, sizeof(devicename), "%s/%s", LED_DEVICE, "activate");
     fd = TEMP_FAILURE_RETRY(open(devicename, O_RDWR));
     if (fd < 0) {
-        ALOGE("open %s failed, errno = %d", devicename, errno);
+        if (errno == ENOENT) {
+            ALOGD("%s not present, not an LED vibrator", devicename);
+        } else {
+            ALOGE("open %s failed, errno = %d", devicename, errno);
+        }
         return;
     }
+    close(fd);
 
     mDetected = true;
 
