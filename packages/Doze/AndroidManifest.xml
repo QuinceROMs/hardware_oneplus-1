@@ -27,6 +27,7 @@
     <protected-broadcast android:name="com.android.systemui.doze.pulse" />
 
     <application
+        android:name=".DozeApplication"
         android:label="@string/device_settings_app_name"
         android:persistent="true"
         android:theme="@style/Theme.SubSettingsBase.Expressive">
