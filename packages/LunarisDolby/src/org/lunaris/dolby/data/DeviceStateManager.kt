@@ -62,7 +62,8 @@ class DeviceStateManager(private val context: Context) {
     }
 
     private fun saveSnapshot(deviceKey: String) {
-        val profile = dolbyPrefs.getString(DolbyConstants.PREF_PROFILE, null)?.toIntOrNull() ?: 0
+        // Not the active profile: restoring an app's profile would make it the user's choice.
+        val profile = dolbyPrefs.getInt(DolbyConstants.PREF_USER_PROFILE, 0)
         val settings = getProfilePrefs(profile)
         // A profile whose equalizer was never set keeps the flat default of the DAX configuration.
         val gains = parseGains(settings.getString(DolbyConstants.PREF_PRESET, null)) ?: IntArray(EQ_BANDS)
