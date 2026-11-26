@@ -6,3 +6,10 @@ hal_client_domain(platform_app, vendor_hal_dspmanager);
 r_dir_file(platform_app, vendor_sysfs_graphics)
 
 r_dir_file(platform_app, vendor_sysfs_sde_crtc)
+
+# OnePlus Camera
+typeattribute platform_app_36 halclientdomain;
+typeattribute platform_app_36 vendor_hal_cameraMDM_client;
+allow platform_app_36 vendor_xdsp_device:chr_file rw_file_perms;
+dontaudit platform_app_36 adsprpcd_file:file read;
+dontaudit platform_app_36 vendor_sysfs_kgsl:file read;
